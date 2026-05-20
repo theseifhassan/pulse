@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pulse V1 Design · pulse-my8</title>
+<style>
+  :root {
+    --ink: #16140f;
+    --ink-soft: #4a463d;
+    --ink-mute: #7a7468;
+    --paper: #faf7f1;
+    --paper-2: #f3eee3;
+    --rule: #d8d1c0;
+    --accent: #b7410e;
+    --accent-soft: #f3e2d6;
+    --ok: #2f6f3a;
+    --warn: #8a6a00;
+    --maxw: 1180px;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--paper); color: var(--ink); }
+  body {
+    margin: 0;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 32px 24px 96px; }
+  header.doc { border-bottom: 1px solid var(--rule); padding-bottom: 24px; margin-bottom: 32px; }
+  .eyebrow {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+  }
+  h1 {
+    font-family: "Iowan Old Style", "Charter", Georgia, "Times New Roman", serif;
+    font-weight: 600;
+    font-size: clamp(28px, 4vw, 40px);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin: 8px 0 16px;
+  }
+  h2 {
+    font-family: "Iowan Old Style", "Charter", Georgia, serif;
+    font-weight: 600;
+    font-size: 22px;
+    letter-spacing: -0.005em;
+    margin: 48px 0 12px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+  }
+  h2:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+  h3 { font-size: 16px; margin: 20px 0 8px; color: var(--ink-soft); font-weight: 600; }
+  p { margin: 0 0 12px; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(183,65,14,0.3); }
+  a:hover { border-bottom-color: var(--accent); }
+  code, kbd {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: var(--paper-2);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--ink-soft);
+  }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px; font-weight: 500; line-height: 1.4;
+    border: 1px solid var(--rule);
+    background: var(--paper-2);
+    color: var(--ink-soft);
+  }
+  .pill.ready { background: #e3efde; color: var(--ok); border-color: #bcd5b3; }
+  .pill.design { background: var(--accent-soft); color: var(--accent); border-color: #e6c6b3; }
+
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px 24px;
+    padding: 16px 20px;
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    margin: 24px 0 0;
+  }
+  .meta dt { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-mute); margin: 0 0 2px; }
+  .meta dd { margin: 0; font-size: 14px; color: var(--ink); }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 56px;
+    margin-top: 32px;
+  }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; gap: 0; } .toc { display: none; } }
+
+  nav.toc {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+    font-size: 13px;
+    border-left: 1px solid var(--rule);
+    padding-left: 16px;
+  }
+  nav.toc .toc-title { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: 12px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 6px 0; }
+  nav.toc a { color: var(--ink-soft); border: 0; }
+  nav.toc a:hover { color: var(--accent); }
+
+  .summary-card {
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    background: #fff;
+    padding: 20px 24px;
+    border-radius: 4px;
+    margin: 24px 0 8px;
+    font-size: 15.5px;
+  }
+  .summary-card p:last-child { margin-bottom: 0; }
+
+  .goals { list-style: none; padding: 0; margin: 8px 0; }
+  .goals li {
+    padding: 8px 0 8px 28px;
+    position: relative;
+    border-bottom: 1px dashed var(--rule);
+    font-size: 14.5px;
+  }
+  .goals li:last-child { border-bottom: 0; }
+  .goals li::before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    top: 8px;
+    color: var(--accent);
+    font-weight: bold;
+  }
+
+  .journeys { display: grid; grid-template-columns: 1fr; gap: 16px; margin: 8px 0; }
+  .journey {
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 18px 20px;
+    background: #fff;
+  }
+  .journey h3 { margin: 0 0 8px; font-family: "Iowan Old Style", Charter, Georgia, serif; font-weight: 600; font-size: 17px; color: var(--ink); }
+  .journey .row { display: grid; grid-template-columns: 70px 1fr; gap: 6px 16px; font-size: 14px; margin: 6px 0; }
+  .journey .row dt { color: var(--ink-mute); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; padding-top: 3px; }
+  .journey .row dd { margin: 0; color: var(--ink-soft); }
+
+  .states {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin: 8px 0;
+  }
+  .state {
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--ink-mute);
+    border-radius: 4px;
+    padding: 12px 14px;
+    background: #fff;
+  }
+  .state.success { border-left-color: var(--ok); }
+  .state.error { border-left-color: var(--accent); }
+  .state.loading { border-left-color: var(--warn); }
+  .state.empty { border-left-color: #5a7a9a; }
+  .state.partial { border-left-color: #8b6db5; }
+  .state .label {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    margin-bottom: 6px;
+  }
+  .state .body { font-size: 14px; color: var(--ink-soft); }
+
+  .card-anatomy {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 24px;
+    margin: 16px 0;
+    align-items: start;
+  }
+  @media (max-width: 700px) { .card-anatomy { grid-template-columns: 1fr; } }
+  .mock {
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    background: #fff;
+    padding: 16px;
+    font-size: 13px;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+  }
+  .mock .mock-img {
+    height: 100px;
+    background: linear-gradient(135deg, #efe7d7, #ddd2bb);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .mock .mock-img::after {
+    content: "media (optional, URL only)";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink-mute);
+    font-size: 11px;
+  }
+  .mock .mock-source { font-size: 11px; color: var(--ink-mute); margin-bottom: 4px; }
+  .mock .mock-title { font-family: "Iowan Old Style", Charter, Georgia, serif; font-weight: 600; font-size: 16px; margin-bottom: 6px; color: var(--ink); }
+  .mock .mock-body { color: var(--ink-soft); font-size: 13px; margin-bottom: 12px; line-height: 1.4; }
+  .mock .mock-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--rule);
+    padding-top: 10px;
+    font-size: 12px;
+    color: var(--ink-mute);
+  }
+  .mock .mock-actions { display: flex; gap: 6px; }
+  .mock .mock-btn {
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+    background: var(--paper-2);
+  }
+
+  ul.fields { list-style: none; padding: 0; margin: 0; }
+  ul.fields li {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--rule);
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  ul.fields li:last-child { border-bottom: 0; }
+  ul.fields .name { color: var(--ink); font-weight: 600; }
+  ul.fields .req { font-size: 11px; color: var(--ink-mute); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  ul.fields .req.opt { color: var(--ink-mute); }
+  ul.fields .req.req-yes { color: var(--ok); }
+
+  ul.bare { list-style: none; padding: 0; margin: 8px 0; }
+  ul.bare li { padding: 6px 0; border-bottom: 1px dashed var(--rule); }
+  ul.bare li:last-child { border-bottom: 0; }
+
+  .a11y-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+    margin: 8px 0;
+  }
+  .a11y {
+    border: 1px solid var(--rule);
+    background: #fff;
+    border-radius: 4px;
+    padding: 12px 14px;
+  }
+  .a11y .h { font-size: 12px; color: var(--ink-mute); letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 6px; }
+  .a11y .b { font-size: 14px; color: var(--ink-soft); }
+
+  .patterns { list-style: none; padding: 0; margin: 8px 0; }
+  .patterns li {
+    padding: 12px 14px;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    margin-bottom: 8px;
+    background: #fff;
+  }
+  .patterns li strong { color: var(--ink); }
+
+  .oos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px 16px; }
+  .oos-grid div {
+    padding: 8px 10px;
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    color: var(--ink-mute);
+    font-size: 14px;
+    text-decoration: line-through;
+    text-decoration-color: rgba(122,116,104,0.4);
+  }
+
+  footer.doc {
+    margin-top: 64px;
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
+    font-size: 12px;
+    color: var(--ink-mute);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: space-between;
+  }
+
+  @media print {
+    body { background: white; }
+    .layout { grid-template-columns: 1fr; }
+    .toc { display: none; }
+    h2 { break-before: page; border-top: 0; }
+    h2:first-of-type { break-before: auto; }
+    a { color: inherit; border: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="doc">
+    <div class="eyebrow">Design Artifact · pulse-my8</div>
+    <h1>Pulse V1 Design</h1>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <span class="pill ready">● Ready For Design</span>
+      <span class="pill design">design</span>
+      <span class="pill">Mobile-first</span>
+    </div>
+    <dl class="meta">
+      <div><dt>Source Scope</dt><dd><a href="../scope/pulse-my8-pulse-v1-scope.html">pulse-v1-scope</a></dd></div>
+      <div><dt>Last Updated</dt><dd>2026-05-20</dd></div>
+      <div><dt>Related Issue</dt><dd><code>pulse-my8</code></dd></div>
+      <div><dt>Pull Request</dt><dd><a href="https://github.com/theseifhassan/pulse/pull/1">theseifhassan/pulse#1</a></dd></div>
+    </dl>
+  </header>
+
+  <div class="layout">
+    <main>
+
+      <h2 id="overview">Overview</h2>
+      <div class="summary-card">
+        <p>Pulse v1 needs a mobile-first, touch-optimized private feed UI for high-signal recommendation cards. The visual direction is inspired by <a href="https://www.effect.institute">effect.institute</a>, <a href="https://www.effect.solutions">effect.solutions</a>, and <a href="https://www.kitlangton.com">kitlangton.com</a> without turning v1 into a full branding exercise.</p>
+        <p>Use shadcn components and Tailwind v4 as implementation primitives, but avoid a generic dashboard look. The interface should feel like a compact signal surface: focused, readable, tactile, and optimized for quick inspection.</p>
+      </div>
+
+      <h2 id="users">Users &amp; Goals</h2>
+      <p>Seif is the only human user. Layla/agents are producer actors, not UI users — they create feed items through the protected API.</p>
+      <h3>Seif's Goals</h3>
+      <ul class="goals">
+        <li>Open Pulse privately through Clerk authentication.</li>
+        <li>See unread recommendations first.</li>
+        <li>Quickly understand why each item matters.</li>
+        <li>Open the original source when interested.</li>
+        <li>Mark items read/unread.</li>
+        <li>Leave thumbs up/down feedback with optional reasoning.</li>
+      </ul>
+
+      <h2 id="journeys">User Journeys</h2>
+      <div class="journeys">
+        <div class="journey">
+          <h3>Inspect Today's Signals</h3>
+          <dl class="row"><dt>Who</dt><dd>Seif</dd></dl>
+          <dl class="row"><dt>Goal</dt><dd>See what is worth inspecting now.</dd></dl>
+          <dl class="row"><dt>Trigger</dt><dd>Seif opens Pulse.</dd></dl>
+          <dl class="row"><dt>Flow</dt><dd>Seif passes the Clerk-backed private access gate, lands on unread items sorted by recency, scans each card's title / source / TLDR / media, opens the source when useful, and marks items read as they are handled.</dd></dl>
+        </div>
+        <div class="journey">
+          <h3>Give Taste Feedback</h3>
+          <dl class="row"><dt>Who</dt><dd>Seif</dd></dl>
+          <dl class="row"><dt>Goal</dt><dd>Tell Layla whether a recommendation was useful.</dd></dl>
+          <dl class="row"><dt>Trigger</dt><dd>Seif reacts to an item.</dd></dl>
+          <dl class="row"><dt>Flow</dt><dd>Seif taps thumbs up or down, optionally adds a short reason, and returns to the feed without navigating through a heavy form.</dd></dl>
+        </div>
+        <div class="journey">
+          <h3>Review Read Items</h3>
+          <dl class="row"><dt>Who</dt><dd>Seif</dd></dl>
+          <dl class="row"><dt>Goal</dt><dd>Find previously inspected items.</dd></dl>
+          <dl class="row"><dt>Trigger</dt><dd>Seif switches from unread feed to read/history.</dd></dl>
+          <dl class="row"><dt>Flow</dt><dd>Seif opens a read/history view or filter where read items remain sorted by recency or read time.</dd></dl>
+        </div>
+      </div>
+
+      <h2 id="states">Required States</h2>
+      <div class="states">
+        <div class="state success">
+          <div class="label">Success</div>
+          <div class="body">Unread feed renders cards sorted by recency; feedback and read/unread changes visibly apply.</div>
+        </div>
+        <div class="state error">
+          <div class="label">Error</div>
+          <div class="body">Auth failure, feed load, feedback submit, read/unread update, and source-open fallback must show clear messages. Failed per-item actions must roll back optimistic UI state.</div>
+        </div>
+        <div class="state loading">
+          <div class="label">Loading</div>
+          <div class="body">Initial feed uses card-shaped skeletons. Per-card actions (read/unread, feedback) use optimistic updates with rollback. Pagination uses an inline indicator at the cursor boundary.</div>
+        </div>
+        <div class="state empty">
+          <div class="label">Empty</div>
+          <div class="body">Unread feed empty state communicates that there is nothing new to inspect.</div>
+        </div>
+        <div class="state partial">
+          <div class="label">Partial</div>
+          <div class="body">Items without media must still feel complete; optional feedback reasoning can be absent.</div>
+        </div>
+      </div>
+
+      <h2 id="card">Card Anatomy</h2>
+      <div class="card-anatomy">
+        <div class="mock" aria-hidden="true">
+          <div class="mock-img"></div>
+          <div class="mock-source">arxiv.org · 4h ago</div>
+          <div class="mock-title">Headline-style title, scannable in one glance</div>
+          <div class="mock-body">TLDR/key information sits here as the body. One or two short sentences explaining why this is worth Seif's attention.</div>
+          <div class="mock-bar">
+            <div class="mock-actions">
+              <span class="mock-btn">↑</span>
+              <span class="mock-btn">↓</span>
+              <span class="mock-btn">↗ open</span>
+            </div>
+            <span>unread</span>
+          </div>
+        </div>
+        <div>
+          <h3>Visible Fields</h3>
+          <ul class="fields">
+            <li><span class="name">Title</span><span class="req req-yes">required</span></li>
+            <li><span class="name">Source name or URL</span><span class="req req-yes">required</span></li>
+            <li><span class="name">Image / media (by URL)</span><span class="req opt">optional</span></li>
+            <li><span class="name">Body with TLDR / key info</span><span class="req req-yes">required</span></li>
+            <li><span class="name">Created / received time</span><span class="req req-yes">required</span></li>
+            <li><span class="name">Read / unread affordance</span><span class="req req-yes">required</span></li>
+            <li><span class="name">Open-source action</span><span class="req req-yes">required</span></li>
+            <li><span class="name">Thumbs up / down (mutable)</span><span class="req req-yes">required</span></li>
+            <li><span class="name">Reasoning input on feedback</span><span class="req opt">optional</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <h2 id="feed-behavior">Feed List Behavior</h2>
+      <ul class="bare">
+        <li>Unread feed and read/history view both load pages bounded by a cursor.</li>
+        <li>Continuation must be surfaced at the page boundary rather than rendering an unbounded list.</li>
+        <li>Per-card mutations (read/unread, feedback) update optimistically and roll back on failure.</li>
+      </ul>
+
+      <h2 id="constraints">Constraints</h2>
+      <ul class="bare">
+        <li>Mobile-first and touch-first: large hit targets, comfortable vertical rhythm, readable card density, and no hover-only interactions.</li>
+        <li>Private single-owner app using Clerk: no public profile, sharing, comments, likes, follows, or social graph UI.</li>
+        <li>No manual feed item creation UI in v1.</li>
+        <li>No extensive logo/identity system in v1.</li>
+        <li>Use shadcn components and Tailwind v4.</li>
+        <li>Keep UI centered on the single feed experience rather than a dashboard.</li>
+        <li>Media is referenced by URL only; the UI must degrade gracefully when remote media is unavailable.</li>
+        <li>Feed views are paginated by cursor; the UI must never assume the full history is loaded.</li>
+      </ul>
+
+      <h2 id="a11y">Accessibility</h2>
+      <div class="a11y-grid">
+        <div class="a11y"><div class="h">Keyboard</div><div class="b">Interactive controls must be keyboard reachable.</div></div>
+        <div class="a11y"><div class="h">Touch targets</div><div class="b">At least 44px where practical.</div></div>
+        <div class="a11y"><div class="h">Labels</div><div class="b">Feedback controls need accessible labels distinguishing thumbs up and thumbs down.</div></div>
+        <div class="a11y"><div class="h">Color</div><div class="b">Color cannot be the only signal for read/unread or feedback state.</div></div>
+      </div>
+
+      <h2 id="patterns">Related Patterns</h2>
+      <ul class="patterns">
+        <li><strong>Effect references</strong> — technical, editorial, high-contrast, sparse-but-distinct visual language.</li>
+        <li><strong>Kit Langton reference</strong> — personal, compact, writing-forward, high-signal presentation.</li>
+        <li><strong>Social / article card metaphor</strong> — concise post or article recommendation, not a task card.</li>
+      </ul>
+
+      <h2 id="oos">Out Of Scope</h2>
+      <div class="oos-grid">
+        <div>Full brand identity exploration.</div>
+        <div>Multi-column desktop dashboard.</div>
+        <div>Public social profile or sharing surfaces.</div>
+        <div>Manual creation forms.</div>
+        <div>Feed analytics or curation dashboards.</div>
+        <div>Media upload, image hosting, or in-app media editing.</div>
+        <div>Archival, retention, or deletion UI for read/history items.</div>
+      </div>
+
+      <h2 id="open">Open Questions</h2>
+      <p>None blocking breakdown.</p>
+
+    </main>
+
+    <nav class="toc" aria-label="Table of contents">
+      <div class="toc-title">On this page</div>
+      <ol>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#users">Users &amp; Goals</a></li>
+        <li><a href="#journeys">User Journeys</a></li>
+        <li><a href="#states">Required States</a></li>
+        <li><a href="#card">Card Anatomy</a></li>
+        <li><a href="#feed-behavior">Feed Behavior</a></li>
+        <li><a href="#constraints">Constraints</a></li>
+        <li><a href="#a11y">Accessibility</a></li>
+        <li><a href="#patterns">Related Patterns</a></li>
+        <li><a href="#oos">Out Of Scope</a></li>
+        <li><a href="#open">Open Questions</a></li>
+      </ol>
+    </nav>
+  </div>
+
+  <footer class="doc">
+    <div>Source: <code>.claude/artifacts/design/pulse-my8-pulse-v1-design.md</code></div>
+    <div>Generated alongside markdown source · Pulse · pulse-my8</div>
+  </footer>
+</div>
+</body>
+</html>
