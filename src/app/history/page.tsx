@@ -8,7 +8,7 @@ import { getDb } from "~/server/db";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
+export default async function HistoryPage() {
   const { userId } = await auth();
   const env = getServerEnv();
   if (!userId) {
@@ -27,9 +27,9 @@ export default async function HomePage() {
     );
   }
   const page = await fetchFeedPage(getDb(), {
-    variant: "unread",
+    variant: "history",
     cursor: null,
     limit: DEFAULT_PAGE_SIZE,
   });
-  return <FeedView initial={page} variant="unread" />;
+  return <FeedView initial={page} variant="history" />;
 }
