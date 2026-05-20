@@ -1,0 +1,128 @@
+schema_version: 2
+workflow_root: .claude
+
+families:
+  tracker:
+    via: beads
+    config:
+      project_name: pulse
+      prefix: pulse
+      command: bd
+      issue_id_pattern: "pulse-[a-z0-9]+"
+      status_values:
+        open: open
+        in_progress: in_progress
+        blocked: blocked
+        closed: closed
+      type_values:
+        feature: feature
+        bug: bug
+        task: task
+        chore: task
+        spike: task
+    mappings:
+      status_map:
+        todo: open
+        doing: in_progress
+        blocked: blocked
+        done: closed
+      type_map:
+        feat: feature
+        fix: bug
+        chore: task
+        refactor: task
+        spike: task
+        research: task
+    readiness_checks:
+      - id: backend_reachable
+        description: bd command is available and workspace can be read
+      - id: backend_authenticated
+        description: local beads database is accessible
+      - id: status_values_resolvable
+        description: configured status values are accepted by beads
+      - id: type_values_resolvable
+        description: configured type values are accepted by beads
+      - id: prefix_accepted
+        description: configured pulse issue prefix is recognised
+      - id: auto_propagation_disabled_acknowledged
+        description: tracker-side auto status propagation is not applicable for beads
+
+  vcs:
+    via: graphite
+    config:
+      command: gt
+      default_base_branch: master
+      remote: origin
+    mappings:
+      branch_prefix_map:
+        feat: feat
+        fix: fix
+        chore: chore
+        refactor: refactor
+        spike: spike
+    readiness_checks:
+      - id: remote_reachable
+        description: git remote is configured and reachable
+      - id: default_base_exists
+        description: default base branch exists locally or on remote
+      - id: push_allowed
+        description: repository can push code branches
+      - id: stack_workflow_initialized
+        description: Graphite CLI is installed and usable
+
+  review:
+    via: greptile
+    config:
+      repository: unknown/no-git-remote
+      repository_source: git_remote
+    mappings:
+      review_state_map:
+        pending: pending
+        passed: passed
+        failed: failed
+    readiness_checks:
+      - id: repository_registered
+        description: Greptile knows this repository
+      - id: review_artifact_auto_close_supported
+        description: review artifacts can be closed automatically
+      - id: re_trigger_supported
+        description: review can be retriggered for updated diffs
+
+  artifacts:
+    via: local_markdown
+    config:
+      root: .claude/artifacts
+      templates_root: .claude/templates
+    mappings:
+      artifact_type_map:
+        intake: intake
+        scope: scope
+        design: design
+        research: research
+        pr: pr
+    readiness_checks:
+      - id: root_writable
+        description: local artifact root is writable
+
+  validation:
+    via: scripts
+    config:
+      package_manager: bun
+      commands:
+        typecheck: bunx tsc --noEmit
+        format: bunx biome format .
+        test: null
+        lint: bun run lint
+    mappings:
+      validation_stage_map:
+        typecheck: typecheck
+        format: format
+        test: test
+        lint: lint
+    readiness_checks:
+      - id: typecheck_runner_available
+        description: typechecking command can run
+      - id: format_runner_available
+        description: formatting check command can run
+      - id: test_runner_available
+        description: test command is configured and can run

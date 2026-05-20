@@ -1,0 +1,23 @@
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.claude/.setup-state.yaml
+
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Build artifacts
+dist/
+build/
+*.tsbuildinfo
+
+# Local environment/tooling files
+.env
+.env.*
+.mise.toml
