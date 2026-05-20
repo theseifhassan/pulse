@@ -6,7 +6,8 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   const pathname = req.nextUrl.pathname;
   const route = classifyRoute(pathname);
   if (route === "agent") {
-    // /api/ingest authenticates via bearer token (pulse-my8.5); skip Clerk.
+    // /api/ingest and /api/feedback authenticate via Bearer INGEST_TOKEN;
+    // skip Clerk so the bearer header isn't parsed as a JWT.
     return NextResponse.next();
   }
   if (route === "public") {

@@ -14,6 +14,14 @@ describe("classifyRoute", () => {
     expect(classifyRoute("/api/ingestion")).toBe("owner-protected");
   });
 
+  it("classifies /api/feedback as agent (bearer-authed for Layla sync)", () => {
+    expect(classifyRoute("/api/feedback")).toBe("agent");
+  });
+
+  it("does not classify /api/feedbacks as agent (no false-prefix match)", () => {
+    expect(classifyRoute("/api/feedbacks")).toBe("owner-protected");
+  });
+
   it("classifies sign-in and sign-up routes as public", () => {
     expect(classifyRoute("/sign-in")).toBe("public");
     expect(classifyRoute("/sign-in/factor-one")).toBe("public");
