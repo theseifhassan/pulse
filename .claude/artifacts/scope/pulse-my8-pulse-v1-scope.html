@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pulse V1 Scope · pulse-my8</title>
+<style>
+  :root {
+    --ink: #16140f;
+    --ink-soft: #4a463d;
+    --ink-mute: #7a7468;
+    --paper: #faf7f1;
+    --paper-2: #f3eee3;
+    --rule: #d8d1c0;
+    --accent: #b7410e;
+    --accent-soft: #f3e2d6;
+    --ok: #2f6f3a;
+    --warn: #8a6a00;
+    --maxw: 1180px;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--paper); color: var(--ink); }
+  body {
+    margin: 0;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 32px 24px 96px; }
+  header.doc {
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 24px;
+    margin-bottom: 32px;
+  }
+  .eyebrow {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+  }
+  h1 {
+    font-family: "Iowan Old Style", "Charter", Georgia, "Times New Roman", serif;
+    font-weight: 600;
+    font-size: clamp(28px, 4vw, 40px);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin: 8px 0 16px;
+  }
+  h2 {
+    font-family: "Iowan Old Style", "Charter", Georgia, serif;
+    font-weight: 600;
+    font-size: 22px;
+    letter-spacing: -0.005em;
+    margin: 48px 0 12px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+  }
+  h2:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+  h3 { font-size: 16px; margin: 20px 0 8px; color: var(--ink-soft); font-weight: 600; }
+  p { margin: 0 0 12px; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(183,65,14,0.3); }
+  a:hover { border-bottom-color: var(--accent); }
+  code, kbd {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: var(--paper-2);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--ink-soft);
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+    border: 1px solid var(--rule);
+    background: var(--paper-2);
+    color: var(--ink-soft);
+  }
+  .pill.ready { background: #e3efde; color: var(--ok); border-color: #bcd5b3; }
+  .pill.scope { background: var(--accent-soft); color: var(--accent); border-color: #e6c6b3; }
+
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px 24px;
+    padding: 16px 20px;
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    margin: 24px 0 0;
+  }
+  .meta dt { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-mute); margin: 0 0 2px; }
+  .meta dd { margin: 0; font-size: 14px; color: var(--ink); }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 56px;
+    margin-top: 32px;
+  }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; gap: 0; } .toc { display: none; } }
+
+  nav.toc {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+    font-size: 13px;
+    border-left: 1px solid var(--rule);
+    padding-left: 16px;
+  }
+  nav.toc .toc-title { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-mute); margin-bottom: 12px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 6px 0; }
+  nav.toc a { color: var(--ink-soft); border: 0; }
+  nav.toc a:hover { color: var(--accent); }
+
+  .summary-card {
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    background: #fff;
+    padding: 20px 24px;
+    border-radius: 4px;
+    margin: 24px 0 8px;
+    font-size: 15.5px;
+  }
+  .summary-card p:last-child { margin-bottom: 0; }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    margin: 16px 0 0;
+  }
+  .stat {
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 12px 14px;
+    background: #fff;
+  }
+  .stat .n { font-family: "Iowan Old Style", Charter, Georgia, serif; font-size: 28px; line-height: 1; color: var(--ink); }
+  .stat .l { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-mute); margin-top: 4px; }
+
+  table.matrix {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 8px;
+    font-size: 14.5px;
+  }
+  table.matrix th, table.matrix td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  table.matrix th {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    font-weight: 600;
+    background: var(--paper-2);
+  }
+  table.matrix td.k { font-weight: 600; color: var(--ink); white-space: nowrap; width: 24%; }
+  table.matrix td.ev { color: var(--ink-mute); font-size: 13.5px; }
+
+  ol.reqs {
+    padding: 0;
+    margin: 8px 0;
+    list-style: none;
+    counter-reset: req;
+  }
+  ol.reqs li {
+    counter-increment: req;
+    padding: 10px 12px 10px 56px;
+    border-bottom: 1px solid var(--rule);
+    position: relative;
+  }
+  ol.reqs li:last-child { border-bottom: 0; }
+  ol.reqs li::before {
+    content: "R" counter(req);
+    position: absolute;
+    left: 12px;
+    top: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    color: var(--ink-mute);
+    background: var(--paper-2);
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid var(--rule);
+  }
+
+  ul.checklist { list-style: none; padding: 0; margin: 8px 0; }
+  ul.checklist li {
+    padding: 8px 0 8px 28px;
+    position: relative;
+    border-bottom: 1px solid var(--rule);
+    font-size: 14.5px;
+  }
+  ul.checklist li:last-child { border-bottom: 0; }
+  ul.checklist li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 11px;
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--ink-mute);
+    border-radius: 3px;
+    background: #fff;
+  }
+
+  ul.bare { list-style: none; padding: 0; margin: 8px 0; }
+  ul.bare li { padding: 6px 0; border-bottom: 1px dashed var(--rule); }
+  ul.bare li:last-child { border-bottom: 0; }
+
+  .oos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px 16px; }
+  .oos-grid div {
+    padding: 8px 10px;
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    color: var(--ink-mute);
+    font-size: 14px;
+    text-decoration: line-through;
+    text-decoration-color: rgba(122,116,104,0.4);
+  }
+
+  .decisions { border-left: 2px solid var(--rule); padding-left: 20px; margin: 8px 0; }
+  .decisions .d { margin: 14px 0; position: relative; }
+  .decisions .d::before {
+    content: "";
+    position: absolute;
+    left: -25px;
+    top: 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .decisions .date { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color: var(--ink-mute); }
+  .decisions .body { font-size: 14.5px; color: var(--ink); margin-top: 2px; }
+
+  .refs { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 8px 0; }
+  .ref {
+    border: 1px solid var(--rule);
+    background: #fff;
+    border-radius: 4px;
+    padding: 12px 14px;
+    text-decoration: none;
+    color: var(--ink-soft);
+    display: block;
+    transition: border-color 0.15s;
+  }
+  .ref:hover { border-color: var(--accent); }
+  .ref .name { font-size: 13px; color: var(--ink); font-weight: 600; }
+  .ref .url { font-size: 12px; color: var(--ink-mute); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; }
+
+  footer.doc {
+    margin-top: 64px;
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
+    font-size: 12px;
+    color: var(--ink-mute);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    justify-content: space-between;
+  }
+
+  @media print {
+    body { background: white; }
+    .layout { grid-template-columns: 1fr; }
+    .toc { display: none; }
+    h2 { break-before: page; border-top: 0; }
+    h2:first-of-type { break-before: auto; }
+    a { color: inherit; border: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="doc">
+    <div class="eyebrow">Scope Artifact · pulse-my8</div>
+    <h1>Pulse V1 Scope</h1>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <span class="pill ready">● Ready for Breakdown</span>
+      <span class="pill scope">scope</span>
+      <span class="pill">Phase A</span>
+    </div>
+    <dl class="meta">
+      <div><dt>Source Issue</dt><dd><code>pulse-my8</code></dd></div>
+      <div><dt>Last Updated</dt><dd>2026-05-20</dd></div>
+      <div><dt>Linked Design</dt><dd><a href="../design/pulse-my8-pulse-v1-design.html">pulse-v1-design</a></dd></div>
+      <div><dt>Pull Request</dt><dd><a href="https://github.com/theseifhassan/pulse/pull/1">theseifhassan/pulse#1</a></dd></div>
+    </dl>
+  </header>
+
+  <div class="layout">
+    <main>
+
+      <h2 id="problem">Problem &amp; Outcome</h2>
+      <div class="summary-card">
+        <p>Pulse is a private signal feed for Seif where Layla, an AI assistant/agent, pushes high-signal items worth inspection. V1 delivers a complete production-capable product foundation: an Effect v4 beta backend/API for managing feed items, Postgres + Drizzle persistence, protected agent ingestion, single-owner private access, and a mobile-first touch UI inspired by the provided references.</p>
+        <p>The intended outcome is that Seif can open Pulse, see unread recommendations sorted by recency, inspect compact recommendation cards, open the original source when interested, and leave lightweight thumbs feedback with optional reasoning.</p>
+      </div>
+      <div class="stat-grid">
+        <div class="stat"><div class="n">25</div><div class="l">Requirements</div></div>
+        <div class="stat"><div class="n">19</div><div class="l">Acceptance Criteria</div></div>
+        <div class="stat"><div class="n">12</div><div class="l">Design Decisions</div></div>
+        <div class="stat"><div class="n">20</div><div class="l">Decision Tree Entries</div></div>
+      </div>
+
+      <h2 id="context">Context</h2>
+      <p>Captured source says Pulse is not a social network or generic read-it-later app. It should answer: <em>"What should Seif know or inspect today, and why?"</em></p>
+      <p>Current project state is a default Next.js starter, so product behavior is not constrained by existing app code.</p>
+      <h3>User-Provided References</h3>
+      <div class="refs">
+        <a class="ref" href="https://www.effect.institute"><div class="name">Effect Institute</div><div class="url">effect.institute</div></a>
+        <a class="ref" href="https://www.effect.solutions"><div class="name">Effect Solutions</div><div class="url">effect.solutions</div></a>
+        <a class="ref" href="https://www.kitlangton.com"><div class="name">Kit Langton</div><div class="url">kitlangton.com</div></a>
+      </div>
+
+      <h2 id="decisions">Decision Tree</h2>
+      <table class="matrix">
+        <thead><tr><th>Decision</th><th>Resolution</th><th>Evidence</th></tr></thead>
+        <tbody>
+          <tr><td class="k">Outcome</td><td>V1 is a complete backend/API plus mobile-first UI for the private feed, not a seeded/manual-only MVP.</td><td class="ev">User answer during scoping.</td></tr>
+          <tr><td class="k">Users &amp; actors</td><td>Seif is the only human user; Layla/agents are write-side producers via API.</td><td class="ev">Captured source and user answers.</td></tr>
+          <tr><td class="k">Permissions</td><td>Clerk single-owner private access for Seif. No roles, admin screens, public signup, or invitations.</td><td class="ev">User selected single-owner gate and later specified Clerk.</td></tr>
+          <tr><td class="k">Agent ingestion</td><td>Token-protected ingest path for Layla/agents, separate from Seif's UI session.</td><td class="ev">User selected token-protected ingest.</td></tr>
+          <tr><td class="k">Terminology</td><td>A feed item is like a social media post: title, optional image/media, source, body with TLDR/key info.</td><td class="ev">User answer.</td></tr>
+          <tr><td class="k">Feedback</td><td>Thumbs up/down plus optional reasoning to express intent.</td><td class="ev">User answer.</td></tr>
+          <tr><td class="k">Item lifecycle</td><td>Read or unread. Main view filters out read items and sorts unread by recency.</td><td class="ev">User answer.</td></tr>
+          <tr><td class="k">Source of truth</td><td>Postgres for feed items, read state, and feedback. Drizzle owns schema/migrations.</td><td class="ev">User selected Postgres source of truth.</td></tr>
+          <tr><td class="k">Backend/API stack</td><td>Effect v4 beta for both backend and API.</td><td class="ev">User instruction.</td></tr>
+          <tr><td class="k">Frontend stack</td><td>shadcn components with Tailwind v4.</td><td class="ev">User instruction.</td></tr>
+          <tr><td class="k">UI shape</td><td>Single feed experience, mobile-first / touch-first cards.</td><td class="ev">User selected single feed experience.</td></tr>
+          <tr><td class="k">Production rollout</td><td>Vercel + managed Postgres. Env vars for database, owner auth, and ingest token.</td><td class="ev">User selected Vercel plus managed Postgres.</td></tr>
+          <tr><td class="k">Acceptance gates</td><td>Effect API contract tests, Drizzle schema/migration checks, API auth checks, mobile/touch UI checks.</td><td class="ev">User selected these gates.</td></tr>
+          <tr><td class="k">Media handling</td><td>External media referenced by URL only. No uploads, no Vercel Blob/S3, no image proxy.</td><td class="ev">Scope review — keep v1 storage surface minimal.</td></tr>
+          <tr><td class="k">Feed pagination</td><td>Cursor pagination keyed on creation time + id. Default page size sized at breakdown.</td><td class="ev">Scope review — unbounded loads not acceptable for production-capable feed.</td></tr>
+          <tr><td class="k">URL deduplication</td><td>Source URL is unique per feed item. Ingest is idempotent on URL; duplicates return a clear conflict.</td><td class="ev">Scope review — Layla can repeat candidates; dedup must be deterministic.</td></tr>
+          <tr><td class="k">Feedback mutability</td><td>One feedback record per item per owner. Thumbs and reasoning can be updated or cleared. Latest state wins.</td><td class="ev">Scope review — Seif must be able to change his mind.</td></tr>
+          <tr><td class="k">Data retention</td><td>Read/history items retained indefinitely in v1. No automated retention, archival, or deletion UI.</td><td class="ev">Scope review — defer lifecycle policy beyond v1.</td></tr>
+          <tr><td class="k">Token rotation</td><td>Single static ingest token via env var. Rotation by redeploy.</td><td class="ev">Scope review — single-owner private app does not warrant a token store in v1.</td></tr>
+          <tr><td class="k">Ingest rate limiting</td><td>Basic per-token rate limit on ingest endpoint. Concrete limits sized at breakdown.</td><td class="ev">Scope review — protected endpoints on Vercel still benefit from baseline limits.</td></tr>
+          <tr><td class="k">Effect v4 beta risk</td><td>Pin exact beta version. Avoid relying on unstable surface area where stable Effect alternatives exist.</td><td class="ev">Scope review — beta SDK churn is the largest external risk to v1.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="requirements">Requirements</h2>
+      <ol class="reqs">
+        <li>The app must provide an Effect v4 beta backend/API for feed item management.</li>
+        <li>The API must support token-protected agent ingestion so Layla/agents can create feed items.</li>
+        <li>The API must support listing unread feed items sorted by recency.</li>
+        <li>The API must support marking items read/unread.</li>
+        <li>The API must support viewing read/history items outside the main unread feed.</li>
+        <li>The API must support thumbs up/down feedback with optional reasoning.</li>
+        <li>Feed items must include title, optional image/media, source, and body content containing a TLDR/key information for glanceable inspection.</li>
+        <li>Postgres must be the source of truth for feed items, read state, and feedback.</li>
+        <li>Drizzle must define and migrate the database schema.</li>
+        <li>The UI must be private and accessible only to Seif through Clerk-backed single-owner auth.</li>
+        <li>The UI must be mobile-first and optimized for touch-based devices.</li>
+        <li>The main UI must present unread feed items first and sort them by recency.</li>
+        <li>Read items must be filtered out of the main view, with a way to access read/history items.</li>
+        <li>Feed cards must make the TLDR/key information glanceable and provide a clear affordance to open the full source.</li>
+        <li>Feedback must be lightweight from the card or single feed experience: thumbs up/down with optional reasoning.</li>
+        <li>The frontend must use shadcn components and Tailwind v4 while applying custom styling inspired by the provided references.</li>
+        <li>V1 must be production-deployable on Vercel with managed Postgres.</li>
+        <li>Runtime configuration must use env vars for database connection, Clerk auth configuration, and agent ingest token.</li>
+        <li>Feed items must store the source URL as a unique field; ingest must be idempotent on source URL and return a clear conflict response for duplicates.</li>
+        <li>Feed item media must be referenced by URL only; v1 must not implement uploads or proxy storage.</li>
+        <li>List endpoints must be paginated with a cursor keyed on creation time and id, and must apply a bounded default page size.</li>
+        <li>Feedback storage must be a single record per item per owner, allowing thumbs vote and optional reasoning to be updated or cleared.</li>
+        <li>Read and history items must be retained indefinitely in v1; no retention, archival, or deletion behavior is required.</li>
+        <li>The agent ingest endpoint must enforce a basic per-token rate limit with the concrete bound sized during breakdown.</li>
+        <li>The Effect v4 beta dependency must be pinned to an exact version, and breakdown must avoid building load-bearing logic on Effect APIs marked unstable when stable alternatives exist.</li>
+      </ol>
+
+      <h2 id="acceptance">Acceptance Criteria</h2>
+      <ul class="checklist">
+        <li>An authenticated owner can access the private app and unauthenticated users cannot.</li>
+        <li>A request with a valid agent ingest token can create a feed item through the API.</li>
+        <li>Requests without a valid ingest token cannot create feed items through the agent endpoint.</li>
+        <li>Feed items persist to Postgres through Drizzle-managed schema/migrations.</li>
+        <li>The main feed shows unread items sorted newest first.</li>
+        <li>Marking an item read removes it from the main unread feed.</li>
+        <li>Read/history items remain accessible outside the main unread feed.</li>
+        <li>A feed card displays title, source, optional media, TLDR/key body content, and a source-open action.</li>
+        <li>Seif can submit thumbs up/down feedback and optional reasoning for a feed item.</li>
+        <li>Effect API contract tests cover feed item creation, listing, read/unread updates, and feedback updates.</li>
+        <li>Auth tests cover the single-owner gate and token-protected ingest endpoint.</li>
+        <li>Drizzle schema/migration checks run in validation.</li>
+        <li>Mobile/touch UI checks cover card readability, touch target sizing, and core feed interactions.</li>
+        <li>Production deployment requirements for Vercel, managed Postgres, and required env vars are documented.</li>
+        <li>Ingest with a previously seen source URL returns a clear conflict response and does not create a duplicate feed item.</li>
+        <li>Feed list endpoints return a bounded page and a cursor that allows continuation in deterministic recency order.</li>
+        <li>Existing feedback on a feed item can be updated and cleared by the owner.</li>
+        <li>Ingest exceeding the configured per-token rate limit is rejected with a clear rate-limit response.</li>
+        <li>The Effect v4 beta dependency is pinned to an exact version in the lockfile.</li>
+      </ul>
+
+      <h2 id="constraints">Constraints &amp; Dependencies</h2>
+      <ul class="bare">
+        <li>Effect v4 beta is mandatory for backend/API work.</li>
+        <li>Postgres and Drizzle are mandatory for persistence.</li>
+        <li>shadcn components and Tailwind v4 are mandatory for frontend work.</li>
+        <li>The app is private and single-owner in v1.</li>
+        <li>Agent ingestion must be protected by a token or service credential.</li>
+        <li>Production target is Vercel plus managed Postgres.</li>
+        <li>Current validation setup has no test script configured; breakdown should include adding the required test/check scripts.</li>
+        <li>Effect v4 beta is a beta dependency; the exact version must be pinned and breakdown must avoid load-bearing reliance on Effect APIs marked unstable when stable alternatives exist.</li>
+      </ul>
+
+      <h2 id="architecture">Architecture &amp; Testing Strategy</h2>
+      <table class="matrix">
+        <tbody>
+          <tr><td class="k">Backend / API</td><td>Effect v4 beta for API definitions, request handling, dependency layers, error modeling, and service boundaries.</td></tr>
+          <tr><td class="k">Persistence</td><td>Drizzle migrations against Postgres for feed items and feedback.</td></tr>
+          <tr><td class="k">Auth</td><td>Clerk for owner UI access. Separate token-protected path for agent ingestion.</td></tr>
+          <tr><td class="k">Frontend</td><td>Single mobile-first feed experience with shadcn primitives and Tailwind v4 styling.</td></tr>
+          <tr><td class="k">Tests / checks</td><td>Contract tests for API behavior, auth tests for owner/agent paths, migration/schema checks, mobile/touch UI checks.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="oos">Out Of Scope</h2>
+      <div class="oos-grid">
+        <div>Public social networking features.</div>
+        <div>Generic read-it-later workflows.</div>
+        <div>Manual feed item creation in v1.</div>
+        <div>Extensive branding and identity work.</div>
+        <div>Multi-user collaboration, roles, invites, or admin screens.</div>
+        <div>Full autonomous discovery / source crawling beyond the protected ingest API.</div>
+        <div>Custom hosting/platform infrastructure beyond Vercel + managed Postgres.</div>
+        <div>Rich taxonomy, scoring, source credibility, or ingestion sync metadata.</div>
+      </div>
+
+      <h2 id="open">Open Questions</h2>
+      <p>None blocking breakdown.</p>
+
+      <h2 id="readiness">Breakdown Readiness</h2>
+      <p><span class="pill ready">● Ready for Breakdown</span></p>
+
+      <h2 id="design-decisions">Design Decisions</h2>
+      <div class="decisions">
+        <div class="d"><div class="date">2026-05-20</div><div class="body">Scope v1 as a complete private feed product foundation with Effect v4 beta backend/API, Postgres + Drizzle, Clerk owner auth, protected agent ingestion, and mobile-first UI.</div></div>
+        <div class="d"><div class="date">2026-05-20</div><div class="body">Use Clerk for Seif's private UI authentication; keep Layla/agent ingestion on a separate token-protected API path.</div></div>
+        <div class="d"><div class="date">2026-05-20</div><div class="body">Keep manual feed item creation, extensive branding, public social features, and multi-user permissions out of v1.</div></div>
+        <div class="d"><div class="date">2026-05-20</div><div class="body">Use read/unread as the item lifecycle; filter read items out of the main feed and sort unread items by recency.</div></div>
+        <div class="d"><div class="date">2026-05-20</div><div class="body">Reference media by URL only in v1; do not implement uploads or proxy storage.</div></div>
+        <div class="d"><div class="date">2026-05-20</div><div class="body">Paginate list endpoints with a cursor keyed on creation time and id, with a bounded default page size sized at breakdown.</div></div>
+        <div class="d"><div class="date">2026-05-20</div><div class="body">Deduplicate feed items on source URL; ingest is idempotent on URL and returns a clear conflict response for duplicates.</div></div>
+        <div class="d"><div class="date">2026-05-20</div><div class="body">Persist one feedback record per item per owner; allow updates and clearing so Seif can change his mind.</div></div>
+        <div class="d"><div class="date">2026-05-20</div><div class="body">Retain read and history items indefinitely in v1; no retention, archival, or deletion behavior in v1.</div></div>
+        <div class="d"><div class="date">2026-05-20</div><div class="body">Use a single static ingest token via env var; rotation is performed by redeploy in v1.</div></div>
+        <div class="d"><div class="date">2026-05-20</div><div class="body">Apply a basic per-token rate limit on the ingest endpoint; the concrete bound is sized at breakdown.</div></div>
+        <div class="d"><div class="date">2026-05-20</div><div class="body">Pin Effect v4 beta to an exact version and avoid load-bearing reliance on unstable Effect APIs when stable alternatives exist.</div></div>
+      </div>
+
+    </main>
+
+    <nav class="toc" aria-label="Table of contents">
+      <div class="toc-title">On this page</div>
+      <ol>
+        <li><a href="#problem">Problem &amp; Outcome</a></li>
+        <li><a href="#context">Context</a></li>
+        <li><a href="#decisions">Decision Tree</a></li>
+        <li><a href="#requirements">Requirements</a></li>
+        <li><a href="#acceptance">Acceptance Criteria</a></li>
+        <li><a href="#constraints">Constraints</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+        <li><a href="#oos">Out Of Scope</a></li>
+        <li><a href="#open">Open Questions</a></li>
+        <li><a href="#readiness">Breakdown Readiness</a></li>
+        <li><a href="#design-decisions">Design Decisions</a></li>
+      </ol>
+    </nav>
+  </div>
+
+  <footer class="doc">
+    <div>Source: <code>.claude/artifacts/scope/pulse-my8-pulse-v1-scope.md</code></div>
+    <div>Generated alongside markdown source · Pulse · pulse-my8</div>
+  </footer>
+</div>
+</body>
+</html>

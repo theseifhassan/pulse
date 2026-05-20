@@ -71,22 +71,20 @@ families:
         description: Graphite CLI is installed and usable
 
   review:
-    via: greptile
+    via: none
     config:
-      repository: unknown/no-git-remote
-      repository_source: git_remote
+      mode: local_review
+      required_steps:
+        - self_review_diff
+        - validate_before_ship
     mappings:
       review_state_map:
-        pending: pending
-        passed: passed
-        failed: failed
+        pending: local_pending
+        passed: local_passed
+        failed: local_failed
     readiness_checks:
-      - id: repository_registered
-        description: Greptile knows this repository
-      - id: review_artifact_auto_close_supported
-        description: review artifacts can be closed automatically
-      - id: re_trigger_supported
-        description: review can be retriggered for updated diffs
+      - id: local_review_acknowledged
+        description: external review backend disabled; local self-review is required before shipping
 
   artifacts:
     via: local_markdown
