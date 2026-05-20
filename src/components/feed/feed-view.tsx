@@ -32,25 +32,6 @@ const ENDPOINT: Record<Tab, string> = {
   archived: "/api/feed/history",
 };
 
-function greetingFor(now: Date): string {
-  const h = now.getHours();
-  if (h < 5) return "STILL UP";
-  if (h < 12) return "GOOD MORNING";
-  if (h < 17) return "GOOD AFTERNOON";
-  if (h < 21) return "GOOD EVENING";
-  return "LATE";
-}
-
-function dayLabel(now: Date): string {
-  const weekday = now
-    .toLocaleString("en-US", { weekday: "short" })
-    .toUpperCase()
-    .slice(0, 3);
-  const month = now.toLocaleString("en-US", { month: "short" }).toUpperCase();
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${weekday} · ${month} ${day}`;
-}
-
 function nowHHMM(): string {
   const d = new Date();
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")} LOCAL`;
@@ -218,36 +199,8 @@ export function FeedView({ initialFeed, initialArchived }: FeedViewProps) {
     }
   }
 
-  const now = new Date();
-  const greeting = greetingFor(now);
-  const day = dayLabel(now);
-  const totalToday = feedItems.length;
-
   return (
     <div className="flex flex-col">
-      {/* Hero */}
-      <section className="px-4 pb-5 pt-7 sm:pb-6 sm:pt-8">
-        <div className="mb-3.5 flex items-baseline justify-between">
-          <Eyebrow>{greeting}</Eyebrow>
-          <Eyebrow style={{ fontVariantNumeric: "tabular-nums" }}>
-            {day}
-          </Eyebrow>
-        </div>
-        <h1 className="m-0 text-[36px] font-bold leading-[1.05] tracking-[-0.02em] text-ink text-balance lowercase">
-          today&apos;s signals,
-          <br />
-          then quiet.
-        </h1>
-        <p className="m-0 mt-3.5 max-w-[340px] text-[13px] leading-[1.55] text-ink-2 text-pretty">
-          <span className="italic text-ink-3">i read 412 items overnight.</span>{" "}
-          {totalToday === 0
-            ? "nothing worth your time. quiet."
-            : totalToday === 1
-              ? "one is worth your time."
-              : `these ${spell(totalToday)} are worth your time.`}
-        </p>
-      </section>
-
       {/* View tabs */}
       <div className="flex border-b border-[color:var(--rule-strong)]">
         <TabButton active={tab === "feed"} onClick={() => switchTab("feed")}>
@@ -462,32 +415,8 @@ function EmptyState({ tab }: { readonly tab: Tab }) {
 
 function Tail() {
   return (
-    <footer className="px-4 py-8 sm:py-10">
-      <div className="flex flex-col items-center gap-2.5 text-center">
-        <PulsingMark tone="ink-3" size={9} />
-        <div className="mt-0.5 text-[14px] font-bold tracking-[0.02em] text-ink">
-          you&apos;re up to date.
-        </div>
-        <div className="max-w-[260px] text-[11px] italic leading-[1.55] text-ink-3">
-          i&apos;ll surface the next signal worth your time. nothing to do until
-          then.
-        </div>
-      </div>
+    <footer className="border-t border-[color:var(--rule)] px-4 py-6 text-center text-[11px] italic text-ink-3">
+      no further history.
     </footer>
   );
-}
-
-function spell(n: number): string {
-  switch (n) {
-    case 2:
-      return "two";
-    case 3:
-      return "three";
-    case 4:
-      return "four";
-    case 5:
-      return "five";
-    default:
-      return String(n);
-  }
 }

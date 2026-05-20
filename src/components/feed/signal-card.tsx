@@ -1,7 +1,6 @@
 "use client";
 
 import { ExternalLink, ThumbsDown, ThumbsUp } from "lucide-react";
-import Image from "next/image";
 import { Eyebrow } from "~/components/ui/eyebrow";
 import { inferKind, inferReadLabel, KIND_LABEL } from "~/lib/signal-kind";
 import { cn } from "~/lib/utils";
@@ -117,7 +116,7 @@ export function SignalCard({
           "focus-visible:outline-1 focus-visible:outline-signal focus-visible:outline-offset-[-2px]",
         )}
       />
-      <div className="pointer-events-none relative z-10 px-4 py-5">
+      <div className="pointer-events-none relative z-10 px-4 pb-[22px] pt-5">
         {/* Rank gutter — "01 / 02 / 03" */}
         <div
           aria-hidden="true"
@@ -157,23 +156,6 @@ export function SignalCard({
           <p className="m-0 text-[13px] leading-[1.55] text-ink-2 text-pretty">
             {item.body}
           </p>
-
-          {item.mediaUrl ? (
-            <div className="mt-3 -mx-4 -ml-11 border-y border-[color:var(--rule-strong)] bg-paper-3">
-              <Image
-                src={item.mediaUrl}
-                alt=""
-                width={1280}
-                height={720}
-                loading="lazy"
-                unoptimized
-                className="block aspect-[16/9] w-full object-cover"
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = "none";
-                }}
-              />
-            </div>
-          ) : null}
 
           {/* Expanded panel — source line + thumbs feedback. Re-enables
               pointer events (parent disables them so the absolute toggle
@@ -246,7 +228,7 @@ function FeedbackButton({
     <button
       type="button"
       className={cn(
-        "inline-grid h-11 w-11 place-items-center rounded-pill bg-transparent text-ink-3 transition-colors duration-[160ms] ease-out",
+        "inline-grid h-7 w-7 place-items-center rounded-pill bg-transparent text-ink-3 transition-colors duration-[160ms] ease-out",
         "hover:bg-paper-3",
         "active:duration-[90ms] active:ease-in active:scale-[0.92]",
         "focus-visible:outline-1 focus-visible:outline-signal focus-visible:outline-offset-2",
