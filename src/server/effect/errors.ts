@@ -16,6 +16,10 @@ export class UnauthorizedError extends Data.TaggedError("UnauthorizedError")<{
   readonly reason: string;
 }> {}
 
+export class ForbiddenError extends Data.TaggedError("ForbiddenError")<{
+  readonly reason: string;
+}> {}
+
 export class RateLimitedError extends Data.TaggedError("RateLimitedError")<{
   readonly retryAfterSeconds: number;
 }> {}
@@ -32,6 +36,7 @@ export type AppError =
   | NotFoundError
   | ConflictError
   | UnauthorizedError
+  | ForbiddenError
   | RateLimitedError
   | ValidationError
   | DatabaseError;
@@ -57,6 +62,11 @@ export function errorToResponse(error: AppError): NextResponse {
       return NextResponse.json(
         { error: "Unauthorized", reason: error.reason },
         { status: 401 },
+      );
+    case "ForbiddenError":
+      return NextResponse.json(
+        { error: "Forbidden", reason: error.reason },
+        { status: 403 },
       );
     case "RateLimitedError":
       return NextResponse.json(
