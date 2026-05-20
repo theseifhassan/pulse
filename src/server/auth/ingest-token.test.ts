@@ -69,4 +69,34 @@ describe("requireIngestToken", () => {
     );
     expect(JSON.stringify(exit)).not.toContain("attacker-secret-AAA");
   });
+
+  it("accepts the Bearer scheme case-insensitively", async () => {
+    const result = await Effect.runPromise(
+      requireIngestToken({
+        authHeader: `bearer ${TOKEN}`,
+        expectedToken: TOKEN,
+      }),
+    );
+    expect(result).toBe(TOKEN);
+  });
+
+  it("accepts multiple whitespace characters between Bearer and the token", async () => {
+    const result = await Effect.runPromise(
+      requireIngestToken({
+        authHeader: `Bearer   ${TOKEN}`,
+        expectedToken: TOKEN,
+      }),
+    );
+    expect(result).toBe(TOKEN);
+  });
+
+  it("ignores trailing whitespace on the header", async () => {
+    const result = await Effect.runPromise(
+      requireIngestToken({
+        authHeader: `Bearer ${TOKEN}   `,
+        expectedToken: TOKEN,
+      }),
+    );
+    expect(result).toBe(TOKEN);
+  });
 });

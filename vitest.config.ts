@@ -5,6 +5,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "~": path.resolve(__dirname, "src"),
+      // `server-only` throws on import outside a Next.js Server Component
+      // boundary; vitest runs in plain Node so we map it to a no-op.
+      "server-only": path.resolve(__dirname, "tests/mocks/server-only.ts"),
     },
   },
   test: {

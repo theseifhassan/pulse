@@ -30,13 +30,25 @@ describe("requireOwner", () => {
     expect(Exit.isFailure(exit)).toBe(true);
   });
 
-  it("fails with UnauthorizedError when authenticated user is not the owner", async () => {
+  it("fails with ForbiddenError (403) when authenticated user is not the owner", async () => {
     const exit = await Effect.runPromiseExit(
       requireOwner({ userId: "user_someone_else", ownerUserId: owner }),
     );
     expect(Exit.isFailure(exit)).toBe(true);
     if (Exit.isFailure(exit)) {
-      expect(JSON.stringify(exit.cause)).toMatch(/not the owner/);
+      const serialized = JSON.stringify(exit.cause);
+      expect(serialized).toMatch(/ForbiddenError/);
+      expect(serialized).toMatch(/not the owner/);
+    }
+  });
+
+  it("fails with UnauthorizedError (401) when userId is null — distinct from non-owner 403", async () => {
+    const exit = await Effect.runPromiseExit(
+      requireOwner({ userId: null, ownerUserId: owner }),
+    );
+    expect(Exit.isFailure(exit)).toBe(true);
+    if (Exit.isFailure(exit)) {
+      expect(JSON.stringify(exit.cause)).toMatch(/UnauthorizedError/);
     }
   });
 

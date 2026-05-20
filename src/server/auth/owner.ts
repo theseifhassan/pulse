@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { UnauthorizedError } from "~/server/effect/errors";
+import { ForbiddenError, UnauthorizedError } from "~/server/effect/errors";
 
 export interface OwnerCheckInput {
   readonly userId: string | null | undefined;
@@ -9,12 +9,13 @@ export interface OwnerCheckInput {
 export function requireOwner({
   userId,
   ownerUserId,
-}: OwnerCheckInput): Effect.Effect<string, UnauthorizedError> {
+}: OwnerCheckInput): Effect.Effect<string, UnauthorizedError | ForbiddenError> {
   if (!userId) {
     return Effect.fail(new UnauthorizedError({ reason: "not authenticated" }));
   }
   if (userId !== ownerUserId) {
-    return Effect.fail(new UnauthorizedError({ reason: "not the owner" }));
+    // authenticated but not authorized → 403
+    return Effect.fail(new ForbiddenError({ reason: "not the owner" }));
   }
   return Effect.succeed(userId);
 }

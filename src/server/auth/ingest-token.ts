@@ -6,7 +6,11 @@ export interface TokenCheckInput {
   readonly expectedToken: string;
 }
 
-const BEARER_PATTERN = /^Bearer (.+)$/;
+// HTTP allows any linear whitespace between the scheme and credentials,
+// and tolerates trailing whitespace. RFC 7235: `credentials = auth-scheme
+// 1*SP token68`. Use `\s+` so multiple spaces / tabs are accepted, and
+// trim the captured token before comparing.
+const BEARER_PATTERN = /^Bearer\s+(\S+)\s*$/i;
 
 function constantTimeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
