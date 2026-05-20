@@ -69,6 +69,14 @@ Runtime configuration is validated by `src/lib/env.ts` (Zod schema). The build s
 | `ALLOWED_OWNER_USER_ID` | Clerk user id of the single owner (Seif). Other authenticated users are 403'd. |
 | `INGEST_TOKEN` | Bearer token presented by Layla/agents on `/api/ingest`. Minimum 8 characters. Rotated by setting a new value and redeploying. |
 
+### Ingest Token Rotation
+
+1. Generate a new high-entropy token (e.g. `openssl rand -base64 32`).
+2. Set `INGEST_TOKEN` to the new value in the deployment environment.
+3. Redeploy. Update Layla/agent clients to use the new bearer.
+
+The default ingest rate limit is `60 req / 60 s` per token (see `src/server/auth/rate-limit.ts`). Requests exceeding the limit receive a `429` with a `Retry-After` header.
+
 Validate the current shell environment before booting:
 
 ```bash
