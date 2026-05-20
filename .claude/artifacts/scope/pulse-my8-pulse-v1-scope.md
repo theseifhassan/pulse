@@ -40,6 +40,14 @@ Current project state is a default Next.js starter, so product behavior is not c
 - UI shape: V1 is a single feed experience with mobile-first/touch-first cards. Evidence: user selected single feed experience.
 - Production rollout: V1 targets Vercel plus managed Postgres, with required env vars for database, owner auth, and ingest token. Evidence: user selected Vercel plus managed Postgres.
 - Acceptance gates: Breakdown should include Effect API contract tests, Drizzle schema/migration checks, API auth checks, and mobile/touch UI behavior checks. Evidence: user selected these gates.
+- Media handling: Feed items reference external media by URL only in v1. No uploads, no Vercel Blob/S3, no image proxy. Evidence: scope review — keep v1 storage surface minimal.
+- Feed pagination: List endpoints are bounded with cursor-based pagination keyed on creation time and id, with a default page size sized at breakdown. Evidence: scope review — unbounded loads are not acceptable for a production-capable feed.
+- Source URL deduplication: Source URL is unique per feed item; ingest is idempotent on URL and rejects duplicates with a clear conflict response. Evidence: scope review — Layla can repeat candidates and dedup must be deterministic.
+- Feedback mutability: One feedback record per item per owner; thumbs vote and optional reasoning can be updated or cleared. Latest state wins. Evidence: scope review — Seif must be able to change his mind.
+- Data retention: Read and history items are retained indefinitely in v1. No automated retention, archival, or deletion UI. Evidence: scope review — defer lifecycle policy beyond v1.
+- Ingest token rotation: V1 uses a single static ingest token configured via env var; rotation is performed by redeploy. Evidence: scope review — single-owner private app does not warrant a token store in v1.
+- Ingest rate limiting: Ingest endpoint applies a basic per-token rate limit. Concrete limits are sized at breakdown. Evidence: scope review — protected endpoints on Vercel still benefit from baseline limits.
+- Effect v4 beta risk posture: Effect v4 beta is the mandated backend stack but is acknowledged as a beta dependency. Pin the exact beta version and avoid relying on unstable surface area where alternatives exist within Effect's stable primitives. Evidence: scope review — beta SDK churn is the largest external risk to v1.
 
 ## Requirements
 
@@ -61,6 +69,13 @@ Current project state is a default Next.js starter, so product behavior is not c
 16. The frontend must use shadcn components and Tailwind v4 while applying custom styling inspired by the provided references.
 17. V1 must be production-deployable on Vercel with managed Postgres.
 18. Runtime configuration must use env vars for database connection, Clerk auth configuration, and agent ingest token.
+19. Feed items must store the source URL as a unique field; ingest must be idempotent on source URL and return a clear conflict response for duplicates.
+20. Feed item media must be referenced by URL only; v1 must not implement uploads or proxy storage.
+21. List endpoints must be paginated with a cursor keyed on creation time and id, and must apply a bounded default page size.
+22. Feedback storage must be a single record per item per owner, allowing thumbs vote and optional reasoning to be updated or cleared.
+23. Read and history items must be retained indefinitely in v1; no retention, archival, or deletion behavior is required.
+24. The agent ingest endpoint must enforce a basic per-token rate limit with the concrete bound sized during breakdown.
+25. The Effect v4 beta dependency must be pinned to an exact version, and breakdown must avoid building load-bearing logic on Effect APIs marked unstable when stable alternatives exist.
 
 ## Acceptance Criteria
 
@@ -78,6 +93,11 @@ Current project state is a default Next.js starter, so product behavior is not c
 - [ ] Drizzle schema/migration checks run in validation.
 - [ ] Mobile/touch UI checks cover card readability, touch target sizing, and core feed interactions.
 - [ ] Production deployment requirements for Vercel, managed Postgres, and required env vars are documented.
+- [ ] Ingest with a previously seen source URL returns a clear conflict response and does not create a duplicate feed item.
+- [ ] Feed list endpoints return a bounded page and a cursor that allows continuation in deterministic recency order.
+- [ ] Existing feedback on a feed item can be updated and cleared by the owner.
+- [ ] Ingest exceeding the configured per-token rate limit is rejected with a clear rate-limit response.
+- [ ] The Effect v4 beta dependency is pinned to an exact version in the lockfile.
 
 ## Constraints And Dependencies
 
@@ -88,7 +108,7 @@ Current project state is a default Next.js starter, so product behavior is not c
 - Agent ingestion must be protected by a token or service credential.
 - Production target is Vercel plus managed Postgres.
 - Current validation setup has no test script configured; breakdown should include adding the required test/check scripts.
-- The repository currently has no git remote configured, so the scope PR cannot be filed until VCS readiness is fixed.
+- Effect v4 beta is a beta dependency; the exact version must be pinned and breakdown must avoid load-bearing reliance on Effect APIs marked unstable when stable alternatives exist.
 
 ## UI And Design Requirements
 
@@ -121,11 +141,17 @@ None blocking breakdown.
 
 Ready for Breakdown.
 
-Blocked operationally for scope PR filing until the repository has a reachable git remote/push path.
-
 ## Design Decisions
 
 - 2026-05-20: Scope v1 as a complete private feed product foundation with Effect v4 beta backend/API, Postgres + Drizzle, Clerk owner auth, protected agent ingestion, and mobile-first UI.
 - 2026-05-20: Use Clerk for Seif's private UI authentication; keep Layla/agent ingestion on a separate token-protected API path.
 - 2026-05-20: Keep manual feed item creation, extensive branding, public social features, and multi-user permissions out of v1.
 - 2026-05-20: Use read/unread as the item lifecycle; filter read items out of the main feed and sort unread items by recency.
+- 2026-05-20: Reference media by URL only in v1; do not implement uploads or proxy storage.
+- 2026-05-20: Paginate list endpoints with a cursor keyed on creation time and id, with a bounded default page size sized at breakdown.
+- 2026-05-20: Deduplicate feed items on source URL; ingest is idempotent on URL and returns a clear conflict response for duplicates.
+- 2026-05-20: Persist one feedback record per item per owner; allow updates and clearing so Seif can change his mind.
+- 2026-05-20: Retain read and history items indefinitely in v1; no retention, archival, or deletion behavior in v1.
+- 2026-05-20: Use a single static ingest token via env var; rotation is performed by redeploy in v1.
+- 2026-05-20: Apply a basic per-token rate limit on the ingest endpoint; the concrete bound is sized at breakdown.
+- 2026-05-20: Pin Effect v4 beta to an exact version and avoid load-bearing reliance on unstable Effect APIs when stable alternatives exist.

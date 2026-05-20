@@ -9,42 +9,54 @@ The app should answer: "What should Seif know or inspect today, and why?"
 ## Product Boundaries
 
 - Seif is the only human user in v1, authenticated through Clerk.
-- Layla/agents create feed items through a protected ingest API.
+- Layla/agents create feed items through a protected, token-authenticated ingest API.
 - Feed items are read or unread; the main view shows unread items sorted by recency.
 - Feedback is thumbs up/down with optional reasoning.
 - Manual feed item creation, public social features, multi-user roles, and extensive brand identity work are out of scope for v1.
 
+See `.claude/artifacts/scope/pulse-my8-pulse-v1-scope.md` for the full v1 scope and `.claude/artifacts/design/pulse-my8-pulse-v1-design.md` for the design artifact.
+
+## Stack
+
+- Next.js (App Router) for the frontend shell.
+- Effect v4 beta for backend service and API definitions.
+- Postgres with Drizzle for schema and migrations.
+- Clerk for owner authentication.
+- shadcn components and Tailwind v4 for UI primitives.
+- Bun as the package manager and runner.
+- Vercel plus managed Postgres for production.
+
 ## Getting Started
 
-First, run the development server:
+Install dependencies and run the development server:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun install
+bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the app. Edit `src/app/page.tsx` to make changes; the page auto-reloads.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+bun run dev      # Start the dev server
+bun run build    # Production build
+bun run start    # Run the production build
+bun run lint     # Biome lint/check
+bun run format   # Biome format (write)
+```
 
-## Learn More
+## Environment
 
-To learn more about Next.js, take a look at the following resources:
+Runtime configuration is provided through environment variables for:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- The Postgres connection string.
+- Clerk owner authentication keys.
+- The agent ingest token used by Layla/agents.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Specific variable names will be defined during breakdown and implementation.
 
-## Deploy on Vercel
+## Workflow
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project uses **beads** for issue tracking and **Anvil** workflow conventions. See `CLAUDE.md` and `.claude/CLAUDE.md` for agent guidance, and run `bd prime` for the full beads workflow reference.

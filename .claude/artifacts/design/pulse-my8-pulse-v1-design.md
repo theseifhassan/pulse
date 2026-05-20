@@ -53,8 +53,8 @@ Layla/agents are producer actors, not UI users. They create feed items through t
 ## Required States
 
 - Success: unread feed renders cards sorted by recency; feedback and read/unread changes visibly apply.
-- Error: authentication failure, failed feed load, failed feedback submit, failed read/unread update, and failed source-open fallback must have clear messages.
-- Loading: initial feed loading and per-action pending states must be visible without blocking the entire feed unnecessarily.
+- Error: authentication failure, failed feed load, failed feedback submit, failed read/unread update, and failed source-open fallback must have clear messages. Failed per-item actions must roll back any optimistic UI state.
+- Loading: initial feed load uses card-shaped skeletons. Per-card actions (read/unread toggle, feedback) use optimistic updates with rollback on failure rather than blocking the feed. Pagination uses an inline loading indicator at the cursor boundary.
 - Empty: unread feed empty state should communicate that there is nothing new to inspect.
 - Partial: items without media must still feel complete; optional feedback reasoning can be absent.
 
@@ -64,13 +64,17 @@ Visible feed card content:
 
 - Title.
 - Source name or URL.
-- Optional image/media.
+- Optional image/media referenced by URL (no uploads in v1).
 - Body with TLDR/key information for quick glance.
 - Created/received time or relative recency indicator.
 - Read/unread state affordance.
 - Open-source action.
-- Thumbs up/down feedback controls.
+- Thumbs up/down feedback controls, with the ability to change or clear the vote.
 - Optional reasoning input after feedback intent.
+
+Feed list behavior:
+
+- Unread feed and read/history view both load pages bounded by a cursor; the UI must surface continuation at the page boundary rather than render an unbounded list.
 
 ## Constraints
 
@@ -80,6 +84,8 @@ Visible feed card content:
 - No extensive logo/identity system in v1.
 - Use shadcn components and Tailwind v4.
 - Keep UI centered on the single feed experience rather than a dashboard.
+- Media is referenced by URL only; the UI must degrade gracefully when remote media is unavailable.
+- Feed views are paginated by cursor; the UI must never assume the full history is loaded.
 
 ## Accessibility Requirements
 
@@ -101,6 +107,8 @@ Visible feed card content:
 - Public social profile or sharing surfaces.
 - Manual creation forms.
 - Feed analytics or curation dashboards.
+- Media upload, image hosting, or in-app media editing surfaces.
+- Archival, retention, or deletion UI for read/history items.
 
 ## Open Questions
 
