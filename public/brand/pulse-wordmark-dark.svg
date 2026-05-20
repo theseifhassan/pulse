@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 64" width="320" height="64">
+  
+  <g transform="translate(8,16)">
+    <rect width="32" height="32" fill="#F2EEE6"></rect>
+    <g transform="translate(4,4)">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" fill="none" stroke="#16140F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+    </g>
+  </g>
+  <text x="52" y="42" class="wm">PULSE</text>
+</svg>

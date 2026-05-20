@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { FeedView } from "~/components/feed/feed-view";
+import { Eyebrow } from "~/components/ui/eyebrow";
 import { getServerEnv } from "~/lib/env";
 import { DEFAULT_PAGE_SIZE } from "~/server/api/cursor";
 import { fetchFeedPage } from "~/server/api/feed/list";
@@ -16,13 +17,11 @@ export default async function HistoryPage() {
   }
   if (userId !== env.ALLOWED_OWNER_USER_ID) {
     return (
-      <div className="flex flex-col items-center gap-3 py-16 text-center">
-        <h1 className="font-serif text-2xl font-semibold text-[color:var(--ink)]">
-          Forbidden
+      <div className="flex flex-col items-start gap-3 py-16">
+        <Eyebrow tone="signal">403 · FORBIDDEN</Eyebrow>
+        <h1 className="m-0 text-[32px] font-bold leading-[1.08] tracking-[-0.01em] text-ink lowercase">
+          not your feed.
         </h1>
-        <p className="max-w-md text-sm text-[color:var(--ink-mute)]">
-          Pulse is a single-owner feed. You&apos;re signed in but not the owner.
-        </p>
       </div>
     );
   }
