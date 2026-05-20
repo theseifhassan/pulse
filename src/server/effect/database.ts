@@ -1,19 +1,15 @@
-import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { Context, Effect, Layer } from "effect";
-import postgres from "postgres";
-import { getServerEnv } from "~/lib/env";
-import * as schema from "~/server/db/schema";
+import "server-only";
 
-export type DrizzleDb = PostgresJsDatabase<typeof schema>;
+import { Context, Effect, Layer } from "effect";
+import { type Database as DrizzleDb, getDb } from "~/server/db";
+
+export type { DrizzleDb };
 
 export class Database extends Context.Service<Database, DrizzleDb>()(
   "pulse/Database",
 ) {}
 
-export const DatabaseLive = Layer.effect(Database)(
-  Effect.sync(() => {
-    const env = getServerEnv();
-    const client = postgres(env.DATABASE_URL, { prepare: false });
-    return drizzle(client, { schema });
-  }),
-);
+// The HMR-safe Drizzle singleton lives in src/server/db/index.ts. The Effect
+// layer is a thin wrapper that hands it to the service container, so tests
+// can swap it via Layer.succeed(Database)(fakeDb) without touching env.
+export const DatabaseLive = Layer.effect(Database)(Effect.sync(() => getDb()));

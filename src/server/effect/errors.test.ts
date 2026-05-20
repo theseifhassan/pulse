@@ -4,6 +4,7 @@ import {
   ConflictError,
   DatabaseError,
   errorToResponse,
+  ForbiddenError,
   NotFoundError,
   RateLimitedError,
   UnauthorizedError,
@@ -87,6 +88,17 @@ describe("errorToResponse", () => {
       new UnauthorizedError({ reason: "missing bearer" }),
     );
     expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.error).toBe("Unauthorized");
+  });
+
+  it("maps ForbiddenError to 403 (distinct from 401)", async () => {
+    const res = errorToResponse(
+      new ForbiddenError({ reason: "not the owner" }),
+    );
+    expect(res.status).toBe(403);
+    const body = await res.json();
+    expect(body.error).toBe("Forbidden");
   });
 
   it("maps RateLimitedError to 429 with Retry-After header", async () => {

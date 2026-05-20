@@ -3,18 +3,30 @@ import { type NextRequest, NextResponse } from "next/server";
 import { classifyRoute } from "~/server/auth/route-policy";
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
-  const route = classifyRoute(req.nextUrl.pathname);
+  const pathname = req.nextUrl.pathname;
+  const route = classifyRoute(pathname);
   if (route === "agent") {
-    // /api/ingest authenticates via bearer token (see pulse-my8.5); skip Clerk.
+    // /api/ingest authenticates via bearer token (pulse-my8.5); skip Clerk.
     return NextResponse.next();
   }
   if (route === "public") {
     return NextResponse.next();
   }
-  // owner-protected: require an authenticated session. The owner-identity
-  // check (userId === ALLOWED_OWNER_USER_ID) happens inside each handler
-  // via `requireOwner` so non-owner authenticated users get a clean 403.
-  await auth.protect();
+
+  // owner-protected. For owner-facing API routes we return JSON 401 instead
+  // of redirecting to the Clerk sign-in page so callers (the SPA, Layla, or
+  // future automations) get a deterministic, machine-readable response. For
+  // page routes the Clerk redirect is still the better UX.
+  const { userId } = await auth();
+  if (!userId) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "Unauthorized", reason: "not authenticated" },
+        { status: 401 },
+      );
+    }
+    await auth.protect();
+  }
   return NextResponse.next();
 });
 
