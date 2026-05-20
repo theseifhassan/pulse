@@ -40,22 +40,36 @@ Open [http://localhost:3000](http://localhost:3000) to view the app. Edit `src/a
 ## Scripts
 
 ```bash
-bun run dev      # Start the dev server
-bun run build    # Production build
-bun run start    # Run the production build
-bun run lint     # Biome lint/check
-bun run format   # Biome format (write)
+bun run dev               # Start the dev server
+bun run build             # Production build (runs check:env first)
+bun run start             # Run the production build
+bun run lint              # Biome lint/check
+bun run format            # Biome format (write)
+bun run typecheck         # tsc --noEmit
+bun run test              # vitest unit + contract tests
+bun run test:watch        # vitest watch mode
+bun run test:e2e          # Playwright e2e (mobile/touch gates)
+bun run test:e2e:install  # one-time: install Playwright browsers
+bun run check:env         # validate environment variables
 ```
 
 ## Environment
 
-Runtime configuration is provided through environment variables for:
+Runtime configuration is validated by `src/lib/env.ts` (Zod schema). The build script runs `check:env` and fails fast when any required variable is missing or invalid.
 
-- The Postgres connection string.
-- Clerk owner authentication keys.
-- The agent ingest token used by Layla/agents.
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | Postgres connection string (must be a valid URL). |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk publishable key, exposed to the client. |
+| `CLERK_SECRET_KEY` | Clerk server-side secret. |
+| `ALLOWED_OWNER_USER_ID` | Clerk user id of the single owner (Seif). Other authenticated users are 403'd. |
+| `INGEST_TOKEN` | Bearer token presented by Layla/agents on `/api/ingest`. Minimum 8 characters. Rotated by setting a new value and redeploying. |
 
-Specific variable names will be defined during breakdown and implementation.
+Validate the current shell environment before booting:
+
+```bash
+bun run check:env
+```
 
 ## Workflow
 
