@@ -19,16 +19,20 @@ import {
   DatabaseError,
 } from "~/server/effect/errors";
 
+export const TITLE_MAX = 200;
+export const SUMMARY_MAX = 2000;
+
 export const IngestRequest = z.object({
-  title: z.string().min(1, "title is required"),
+  title: z
+    .string()
+    .min(1, "title is required")
+    .max(TITLE_MAX, `title must be at most ${TITLE_MAX} characters`),
   sourceUrl: z.string().url("sourceUrl must be a valid URL"),
   sourceName: z.string().min(1, "sourceName is required"),
-  mediaUrl: z
+  summary: z
     .string()
-    .url("mediaUrl must be a valid URL")
-    .nullable()
-    .optional(),
-  body: z.string().min(1, "body is required"),
+    .min(1, "summary is required")
+    .max(SUMMARY_MAX, `summary must be at most ${SUMMARY_MAX} characters`),
 });
 
 export type IngestRequestT = z.infer<typeof IngestRequest>;
@@ -73,8 +77,7 @@ export function handleIngest({
             title: input.title,
             sourceUrl: input.sourceUrl,
             sourceName: input.sourceName,
-            mediaUrl: input.mediaUrl ?? null,
-            body: input.body,
+            summary: input.summary,
           })
           .returning({ id: feedItems.id }),
       catch: (cause): AppError => {

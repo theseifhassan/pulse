@@ -68,10 +68,11 @@ curl -X POST "https://pulse.example.com/api/ingest" \
     "title": "Effect 4 beta release notes",
     "sourceUrl": "https://effect.website/blog/effect-4-beta",
     "sourceName": "effect.website",
-    "mediaUrl": null,
-    "body": "TLDR: Effect 4 beta ships a redesigned schema module."
+    "summary": "TLDR: Effect 4 beta ships a redesigned schema module."
   }'
 ```
+
+`title` is capped at 200 characters and `summary` at 2000 characters.
 
 Expected responses:
 

@@ -29,7 +29,7 @@ async function seedItems(
     title: `item ${i}`,
     sourceUrl: `https://example.test/${i}`,
     sourceName: "example.test",
-    body: `body ${i}`,
+    summary: `summary ${i}`,
     createdAt: new Date(base + i * 60_000),
     // mark every other item as read when readSome=true
     readAt:

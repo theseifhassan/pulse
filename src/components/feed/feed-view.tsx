@@ -37,6 +37,20 @@ function nowHHMM(): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")} LOCAL`;
 }
 
+function mergeVotes(
+  prev: Record<string, Vote>,
+  items: readonly FeedItem[],
+): Record<string, Vote> {
+  let next = prev;
+  for (const item of items) {
+    if (item.vote && prev[item.id] !== item.vote) {
+      if (next === prev) next = { ...prev };
+      next[item.id] = item.vote;
+    }
+  }
+  return next;
+}
+
 export function FeedView({ initialFeed, initialArchived }: FeedViewProps) {
   const [tab, setTab] = useState<Tab>("feed");
   const [feedItems, setFeedItems] = useState<FeedItem[]>([
@@ -54,7 +68,16 @@ export function FeedView({ initialFeed, initialArchived }: FeedViewProps) {
   const [expandedId, setExpandedId] = useState<string | null>(
     initialFeed.items[0]?.id ?? null,
   );
-  const [votes, setVotes] = useState<Record<string, Vote>>({});
+  const [votes, setVotes] = useState<Record<string, Vote>>(() => {
+    const seed: Record<string, Vote> = {};
+    for (const item of initialFeed.items) {
+      if (item.vote) seed[item.id] = item.vote;
+    }
+    for (const item of initialArchived.items) {
+      if (item.vote) seed[item.id] = item.vote;
+    }
+    return seed;
+  });
   const [reviewedStatus, setReviewedStatus] = useState<
     Record<string, SignalStatus>
   >({});
@@ -85,6 +108,7 @@ export function FeedView({ initialFeed, initialArchived }: FeedViewProps) {
         const fresh = incoming.filter((s) => !knownIds.has(s.id));
         setFeedItems([...page.items]);
         setFeedCursor(page.nextCursor);
+        setVotes((m) => mergeVotes(m, page.items));
         setLastChecked(nowHHMM());
         setRefreshResult(
           fresh.length === 0
@@ -115,6 +139,7 @@ export function FeedView({ initialFeed, initialArchived }: FeedViewProps) {
         const page = (await res.json()) as Page;
         setActiveItems((prev) => [...prev, ...page.items]);
         setActiveCursor(page.nextCursor);
+        setVotes((m) => mergeVotes(m, page.items));
       } catch (e) {
         toast.error("could not load earlier signals.");
         console.error(e);
@@ -137,10 +162,41 @@ export function FeedView({ initialFeed, initialArchived }: FeedViewProps) {
   }, [activeCursor, loadingMore, loadMore]);
 
   // Tab change resets the expanded card.
-  function switchTab(next: Tab) {
+  const switchTab = useCallback((next: Tab) => {
     setTab(next);
     setExpandedId(null);
-  }
+  }, []);
+
+  // Horizontal swipe → switch tabs. Listens on a wrapper around the entire feed
+  // surface; ignores swipes that originated on interactive children (links,
+  // buttons) so card taps and source-link clicks still work normally.
+  const touchRef = useRef<{ x: number; y: number; ignore: boolean } | null>(
+    null,
+  );
+  const onTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    const t = e.touches[0];
+    if (!t) return;
+    // Don't hijack scrolls inside scrollable inner regions or selections.
+    touchRef.current = { x: t.clientX, y: t.clientY, ignore: false };
+  }, []);
+  const onTouchEnd = useCallback(
+    (e: React.TouchEvent<HTMLDivElement>) => {
+      const start = touchRef.current;
+      touchRef.current = null;
+      if (!start || start.ignore) return;
+      const t = e.changedTouches[0];
+      if (!t) return;
+      const dx = t.clientX - start.x;
+      const dy = t.clientY - start.y;
+      const ax = Math.abs(dx);
+      const ay = Math.abs(dy);
+      // Require a confident horizontal gesture: ≥50px and clearly horizontal.
+      if (ax < 50 || ax < ay * 1.5) return;
+      if (dx < 0 && tab === "feed") switchTab("archived");
+      else if (dx > 0 && tab === "archived") switchTab("feed");
+    },
+    [tab, switchTab],
+  );
 
   function toggleExpand(item: FeedItem) {
     setExpandedId((curr) => (curr === item.id ? null : item.id));
@@ -168,7 +224,7 @@ export function FeedView({ initialFeed, initialArchived }: FeedViewProps) {
       const fbRes = await fetch(`/api/feed/${item.id}/feedback`, {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ vote: next, reasoning: null }),
+        body: JSON.stringify({ vote: next }),
       });
       if (!fbRes.ok) throw new Error(`feedback ${fbRes.status}`);
       // Mark the item read so the unread feed stops surfacing it.
@@ -200,7 +256,11 @@ export function FeedView({ initialFeed, initialArchived }: FeedViewProps) {
   }
 
   return (
-    <div className="flex flex-col">
+    <div
+      className="flex flex-col"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       {/* View tabs */}
       <div className="flex border-b border-[color:var(--rule-strong)]">
         <TabButton active={tab === "feed"} onClick={() => switchTab("feed")}>
@@ -238,23 +298,28 @@ export function FeedView({ initialFeed, initialArchived }: FeedViewProps) {
                 </Eyebrow>
               </div>
               <Rule />
-              {g.items.map((item, i) => (
-                <SignalCard
-                  key={item.id}
-                  item={item}
-                  rank={i + 1}
-                  first={i === 0}
-                  expanded={expandedId === item.id}
-                  archived={tab === "archived"}
-                  vote={votes[item.id] ?? null}
-                  status={
-                    reviewedStatus[item.id] ??
-                    (tab === "archived" ? "read" : null)
-                  }
-                  onToggleExpand={toggleExpand}
-                  onVote={onVote}
-                />
-              ))}
+              {g.items.map((item, i) => {
+                const v = votes[item.id] ?? null;
+                const archivedStatus: SignalStatus =
+                  v === "up" ? "liked" : v === "down" ? "disliked" : "read";
+                return (
+                  <SignalCard
+                    key={item.id}
+                    item={item}
+                    rank={i + 1}
+                    first={i === 0}
+                    expanded={expandedId === item.id}
+                    archived={tab === "archived"}
+                    vote={v}
+                    status={
+                      reviewedStatus[item.id] ??
+                      (tab === "archived" ? archivedStatus : null)
+                    }
+                    onToggleExpand={toggleExpand}
+                    onVote={onVote}
+                  />
+                );
+              })}
               <Rule />
             </section>
           ))}

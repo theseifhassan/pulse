@@ -12,10 +12,10 @@ export interface FeedItem {
   readonly title: string;
   readonly sourceUrl: string;
   readonly sourceName: string;
-  readonly mediaUrl: string | null;
-  readonly body: string;
+  readonly summary: string;
   readonly createdAt: string;
   readonly readAt: string | null;
+  readonly vote: Vote;
 }
 
 export type SignalStatus =
@@ -90,7 +90,7 @@ export function SignalCard({
   onVote,
 }: SignalCardProps) {
   const kind = inferKind(item.sourceUrl);
-  const readLabel = inferReadLabel(item.body, kind);
+  const readLabel = inferReadLabel(item.summary, kind);
   const kindLabel = KIND_LABEL[kind];
   const host = hostFromUrl(item.sourceUrl);
   const statusBadge = status ? STATUS_BADGE[status] : null;
@@ -154,7 +154,7 @@ export function SignalCard({
             {item.title}
           </h2>
           <p className="m-0 text-[13px] leading-[1.55] text-ink-2 text-pretty">
-            {item.body}
+            {item.summary}
           </p>
 
           {/* Expanded panel — source line + thumbs feedback. Re-enables

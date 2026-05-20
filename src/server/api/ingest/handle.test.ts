@@ -36,7 +36,7 @@ const validBody = {
   title: "Effect 4 beta release",
   sourceUrl: "https://effect.website/blog/effect-4-beta-69",
   sourceName: "effect.website",
-  body: "TLDR: Effect 4 beta 69 ships service refactors.",
+  summary: "TLDR: Effect 4 beta 69 ships service refactors.",
 };
 
 beforeEach(async () => {
@@ -184,27 +184,33 @@ describe("POST /api/ingest", () => {
     expect(res.headers.get("Retry-After")).not.toBeNull();
   });
 
-  it("validates that mediaUrl, when present, is a URL", async () => {
+  it("rejects titles longer than the configured limit", async () => {
     const res = await rt.run(
       handleIngest({
-        req: makeRequest({ ...validBody, mediaUrl: "not-a-url" }),
+        req: makeRequest({ ...validBody, title: "x".repeat(201) }),
         expectedToken: TOKEN,
         rateLimitStore: store,
         rateLimitConfig: RATE,
       }),
     );
     expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation");
+    expect(body.issues.join("\n")).toMatch(/title/);
   });
 
-  it("accepts null mediaUrl explicitly", async () => {
+  it("rejects summaries longer than the configured limit", async () => {
     const res = await rt.run(
       handleIngest({
-        req: makeRequest({ ...validBody, mediaUrl: null }),
+        req: makeRequest({ ...validBody, summary: "x".repeat(2001) }),
         expectedToken: TOKEN,
         rateLimitStore: store,
         rateLimitConfig: RATE,
       }),
     );
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Validation");
+    expect(body.issues.join("\n")).toMatch(/summary/);
   });
 });

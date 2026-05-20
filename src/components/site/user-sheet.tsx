@@ -43,6 +43,7 @@ export function UserSheet({ open, onClose }: UserSheetProps) {
     "you";
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
   const initial = (name || "?")[0]?.toUpperCase() ?? "?";
+  const imageUrl = user?.hasImage ? user.imageUrl : null;
 
   return (
     <>
@@ -65,9 +66,20 @@ export function UserSheet({ open, onClose }: UserSheetProps) {
           <div className="flex min-w-0 items-center gap-3">
             <div
               aria-hidden="true"
-              className="grid h-11 w-11 shrink-0 place-items-center bg-ink font-mono text-[18px] font-bold leading-none text-paper"
+              className="relative grid h-11 w-11 shrink-0 place-items-center overflow-hidden bg-ink font-mono text-[18px] font-bold leading-none text-paper"
             >
-              {isLoaded ? initial : ""}
+              {imageUrl ? (
+                // biome-ignore lint/performance/noImgElement: Clerk avatar URLs aren't preconfigured for next/image.
+                <img
+                  src={imageUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : isLoaded ? (
+                initial
+              ) : (
+                ""
+              )}
             </div>
             <div className="min-w-0">
               <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[14px] font-bold leading-[1.2] text-ink lowercase">

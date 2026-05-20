@@ -16,8 +16,7 @@ export const feedItems = pgTable(
     title: text("title").notNull(),
     sourceUrl: text("source_url").notNull().unique(),
     sourceName: text("source_name").notNull(),
-    mediaUrl: text("media_url"),
-    body: text("body").notNull(),
+    summary: text("summary").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -38,7 +37,6 @@ export const feedback = pgTable("feedback", {
     .primaryKey()
     .references(() => feedItems.id, { onDelete: "cascade" }),
   vote: voteEnum("vote"),
-  reasoning: text("reasoning"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow()

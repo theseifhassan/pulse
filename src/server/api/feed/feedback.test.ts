@@ -27,7 +27,7 @@ async function seed(): Promise<string> {
       title: "x",
       sourceUrl: `https://example.test/${crypto.randomUUID()}`,
       sourceName: "example.test",
-      body: "body",
+      summary: "summary",
     })
     .returning({ id: feedItems.id });
   return row.id;
@@ -72,7 +72,7 @@ describe("PUT /api/feed/:id/feedback", () => {
     const id = await seed();
     const res = await rt.run(
       handleFeedback({
-        req: req({ vote: "up", reasoning: "useful" }),
+        req: req({ vote: "up" }),
         itemId: id,
         auth: { userId: OWNER },
         ownerUserId: OWNER,
@@ -82,14 +82,13 @@ describe("PUT /api/feed/:id/feedback", () => {
     const body = await res.json();
     expect(body.feedItemId).toBe(id);
     expect(body.vote).toBe("up");
-    expect(body.reasoning).toBe("useful");
   });
 
   it("updates existing feedback — latest wins", async () => {
     const id = await seed();
     await rt.run(
       handleFeedback({
-        req: req({ vote: "up", reasoning: "useful" }),
+        req: req({ vote: "up" }),
         itemId: id,
         auth: { userId: OWNER },
         ownerUserId: OWNER,
@@ -97,7 +96,7 @@ describe("PUT /api/feed/:id/feedback", () => {
     );
     const res = await rt.run(
       handleFeedback({
-        req: req({ vote: "down", reasoning: "noisy" }),
+        req: req({ vote: "down" }),
         itemId: id,
         auth: { userId: OWNER },
         ownerUserId: OWNER,
@@ -105,7 +104,6 @@ describe("PUT /api/feed/:id/feedback", () => {
     );
     const body = await res.json();
     expect(body.vote).toBe("down");
-    expect(body.reasoning).toBe("noisy");
 
     // verify storage has exactly one row
     const rows = await rt.db
@@ -119,7 +117,7 @@ describe("PUT /api/feed/:id/feedback", () => {
     const id = await seed();
     await rt.run(
       handleFeedback({
-        req: req({ vote: "up", reasoning: "useful" }),
+        req: req({ vote: "up" }),
         itemId: id,
         auth: { userId: OWNER },
         ownerUserId: OWNER,
@@ -127,7 +125,7 @@ describe("PUT /api/feed/:id/feedback", () => {
     );
     const res = await rt.run(
       handleFeedback({
-        req: req({ vote: null, reasoning: null }),
+        req: req({ vote: null }),
         itemId: id,
         auth: { userId: OWNER },
         ownerUserId: OWNER,
@@ -135,7 +133,6 @@ describe("PUT /api/feed/:id/feedback", () => {
     );
     const body = await res.json();
     expect(body.vote).toBeNull();
-    expect(body.reasoning).toBeNull();
   });
 
   it("returns 404 when the feed item does not exist", async () => {
