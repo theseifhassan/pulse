@@ -3,6 +3,7 @@
 .dolt/
 *.db
 .beads-credential-key
+.beads/interactions.jsonl
 .claude/.setup-state.yaml
 
 # Dependencies
