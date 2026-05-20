@@ -83,6 +83,26 @@ Validate the current shell environment before booting:
 bun run check:env
 ```
 
+## Deployment
+
+See [`DEPLOYMENT.md`](DEPLOYMENT.md) for end-to-end Vercel + Postgres + Clerk setup, migration strategy, ingest token rotation, and a `curl` example for Layla.
+
+## API
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| POST | `/api/ingest` | Bearer `INGEST_TOKEN` | Create a feed item (idempotent on `source_url`). |
+| GET | `/api/feed/unread` | Clerk owner | Cursor-paginated unread items, newest-first. |
+| GET | `/api/feed/history` | Clerk owner | Cursor-paginated read items, sorted by read time. |
+| PATCH | `/api/feed/:id/read` | Clerk owner | `{ read: boolean }` — toggle read state. |
+| PUT | `/api/feed/:id/feedback` | Clerk owner | `{ vote: 'up'\|'down'\|null, reasoning?: string\|null }` — upsert. |
+
+Page routes:
+
+- `/` — unread feed (owner only).
+- `/history` — read items (owner only).
+- `/sign-in` — Clerk hosted sign-in.
+
 ## Workflow
 
 This project uses **beads** for issue tracking and **Anvil** workflow conventions. See `CLAUDE.md` and `.claude/CLAUDE.md` for agent guidance, and run `bd prime` for the full beads workflow reference.
