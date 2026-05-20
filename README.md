@@ -51,6 +51,10 @@ bun run test:watch        # vitest watch mode
 bun run test:e2e          # Playwright e2e (mobile/touch gates)
 bun run test:e2e:install  # one-time: install Playwright browsers
 bun run check:env         # validate environment variables
+bun run db:generate       # generate a new Drizzle migration from src/server/db/schema.ts
+bun run db:migrate        # apply pending migrations to DATABASE_URL
+bun run db:push           # push schema directly (dev only — skips migrations)
+bun run db:studio         # open Drizzle Studio against DATABASE_URL
 ```
 
 ## Environment
