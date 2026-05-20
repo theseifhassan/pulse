@@ -34,8 +34,7 @@ const SheetContent = forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-50 border-t border-[color:var(--rule)] bg-[color:var(--paper)] p-5 shadow-lg",
-        "rounded-t-2xl",
+        "fixed inset-x-0 bottom-0 z-50 border-t border-[color:var(--rule-strong)] bg-paper p-5 rounded-t-[6px]",
         "max-h-[85vh] overflow-auto",
         className,
       )}
@@ -43,7 +42,7 @@ const SheetContent = forwardRef<
     >
       {children}
       <DialogPrimitive.Close
-        className="absolute right-4 top-4 rounded-md p-1 opacity-70 hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]"
+        className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center text-ink-3 hover:bg-paper-3 hover:text-ink focus-visible:outline-1 focus-visible:outline-signal focus-visible:outline-offset-2"
         aria-label="Close"
       >
         <X className="h-5 w-5" />
@@ -82,7 +81,7 @@ const SheetDescription = forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm text-[color:var(--ink-mute)]", className)}
+    className={cn("text-[13px] leading-[1.55] text-ink-3", className)}
     {...props}
   />
 ));

@@ -1,85 +1,275 @@
 @import "tailwindcss";
 
-/*
- * Pulse editorial palette. Warm paper, near-black ink, deep amber accent.
- * Inspired by effect.institute and kitlangton.com — high-contrast, sparse,
- * writing-forward. Mobile-first.
- */
+/* =========================================================================
+   PULSE — design tokens
+   Warm paper + warm ink, monospace-first, magazine-grade composition.
+   Sourced from the Pulse design system (claude.ai/design). Adapted for
+   Next.js public-path font URLs and Tailwind v4 @theme inline.
+   ========================================================================= */
+
+@font-face {
+  font-family: "Berkeley Mono";
+  src: url("/fonts/BerkeleyMono-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Berkeley Mono";
+  src: url("/fonts/BerkeleyMono-Oblique.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Berkeley Mono";
+  src: url("/fonts/BerkeleyMono-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Berkeley Mono";
+  src: url("/fonts/BerkeleyMono-Bold-Oblique.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
 :root {
-  /* Surfaces */
-  --paper: #faf7f1;
-  --paper-2: #f3eee3;
-  --rule: #d8d1c0;
-
-  /* Ink */
+  /* Palette — single warm-neutral ramp, paper → ink. Color is reserved for signal. */
+  --paper: #f2eee6;
+  --paper-2: #ece7dc;
+  --paper-3: #e4decf;
   --ink: #16140f;
-  --ink-soft: #4a463d;
-  --ink-mute: #7a7468;
+  --ink-2: #3b362b;
+  --ink-3: #6b6555;
+  --ink-4: #9a9382;
+  --rule: #1614141a;
+  --rule-strong: #16141433;
 
-  /* Accent */
-  --accent: #b7410e;
-  --accent-soft: #f3e2d6;
+  /* Signals — meaning-carrying color only */
+  --signal: #e5431f;
+  --signal-ink: #ffffff;
+  --signal-soft: #fbe5dc;
+  --watch: #c58a00;
+  --watch-soft: #f5e9c8;
+  --verified: #2f7a4f;
+  --verified-soft: #d8e8da;
+  --link: #1a4fbe;
 
-  /* Status */
-  --ok: #2f6f3a;
-  --warn: #8a6a00;
-  --danger: #b53a2f;
+  /* Derived */
+  --bg: var(--paper);
+  --bg-inset: var(--paper-2);
+  --bg-sunken: var(--paper-3);
+  --fg: var(--ink);
+  --fg-muted: var(--ink-3);
+
+  /* Type — Berkeley Mono everywhere */
+  --font-mono: "Berkeley Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-sans: var(--font-mono);
+  --font-display: var(--font-mono);
+
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-base: 14px;
+  --fs-md: 15px;
+  --fs-lg: 17px;
+  --fs-xl: 20px;
+  --fs-2xl: 24px;
+  --fs-3xl: 32px;
+  --fs-4xl: 44px;
+  --fs-5xl: 64px;
+
+  --lh-tight: 1.1;
+  --lh-snug: 1.25;
+  --lh-base: 1.45;
+  --lh-loose: 1.6;
+
+  --tracking-tight: -0.01em;
+  --tracking-wide: 0.06em;
+  --tracking-wider: 0.14em;
+
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  --radius-0: 0;
+  --radius-1: 2px;
+  --radius-2: 4px;
+  --radius-3: 6px;
+  --radius-pill: 999px;
+
+  --shadow-1: 0 1px 0 0 var(--rule);
+  --shadow-2: 0 1px 2px 0 #16141417;
+  --shadow-3: 0 8px 24px -12px #16141433;
+  --shadow-inset: inset 0 0 0 1px var(--rule-strong);
+
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-in: cubic-bezier(0.55, 0, 0.67, 0.22);
+  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-1: 90ms;
+  --dur-2: 160ms;
+  --dur-3: 260ms;
+
+  --touch-min: 44px;
+  --gutter-mobile: 16px;
+  --gutter-desktop: 24px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #14120e;
-    --paper-2: #1d1a14;
-    --rule: #3a3528;
-    --ink: #f1ece0;
-    --ink-soft: #c8c1b1;
-    --ink-mute: #8a8474;
-    --accent: #e07a3a;
-    --accent-soft: #3a221a;
+    --paper: #100e0a;
+    --paper-2: #17140e;
+    --paper-3: #1f1b13;
+    --ink: #f2eee6;
+    --ink-2: #cfc8b6;
+    --ink-3: #8a8472;
+    --ink-4: #58523f;
+    --rule: #f2eee61a;
+    --rule-strong: #f2eee633;
+
+    --signal: #ff6a3d;
+    --signal-soft: #2a1a11;
+    --watch: #e0a93a;
+    --watch-soft: #2a2412;
+    --verified: #6fb07e;
+    --verified-soft: #19261c;
+    --link: #7ea7ff;
+
+    --shadow-2: 0 1px 2px 0 #00000080;
+    --shadow-3: 0 8px 24px -12px #000000b3;
   }
 }
 
+/* Tailwind v4 bridge — utilities like bg-paper, text-ink, text-signal,
+   font-mono, border-rule resolve through these. */
 @theme inline {
-  --color-background: var(--paper);
-  --color-foreground: var(--ink);
-  --color-muted-foreground: var(--ink-mute);
-  --color-soft-foreground: var(--ink-soft);
-  --color-rule: var(--rule);
+  --color-paper: var(--paper);
   --color-paper-2: var(--paper-2);
-  --color-accent: var(--accent);
-  --color-accent-soft: var(--accent-soft);
-  --color-ok: var(--ok);
-  --color-warn: var(--warn);
-  --color-danger: var(--danger);
-
-  --font-sans:
-    var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-    Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-serif: "Iowan Old Style", "Charter", Georgia, "Times New Roman", serif;
-  --font-mono:
-    var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Consolas,
-    monospace;
-
-  /* Touch-target floor for interactive controls (a11y requirement) */
-  --size-touch: 44px;
+  --color-paper-3: var(--paper-3);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-signal: var(--signal);
+  --color-signal-soft: var(--signal-soft);
+  --color-signal-ink: var(--signal-ink);
+  --color-watch: var(--watch);
+  --color-watch-soft: var(--watch-soft);
+  --color-verified: var(--verified);
+  --color-verified-soft: var(--verified-soft);
+  --color-link: var(--link);
+  --font-mono: var(--font-mono);
+  --font-sans: var(--font-mono);
+  --font-display: var(--font-display);
+  --radius-pill: var(--radius-pill);
 }
 
+html,
 body {
-  background: var(--paper);
-  color: var(--ink);
-  font-family: var(--font-sans);
-  font-feature-settings:
-    "rlig" 1,
-    "calt" 1;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+  font-feature-settings: "ss01", "ss02", "calt";
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-/* Headings lean editorial — serif for hierarchy without being dressy. */
-h1,
-h2,
-h3,
+/* Selection paints signal — "underline in a magazine" feel. */
+::selection {
+  background: var(--signal);
+  color: var(--signal-ink);
+}
+
+/* Headings — mono, tight, never title case. */
+h1 {
+  font-weight: 700;
+  font-size: var(--fs-4xl);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--ink);
+}
+h2 {
+  font-weight: 700;
+  font-size: var(--fs-2xl);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tracking-tight);
+}
+h3 {
+  font-weight: 700;
+  font-size: var(--fs-lg);
+  line-height: var(--lh-snug);
+}
 h4 {
-  font-family: var(--font-serif);
-  letter-spacing: -0.005em;
+  font-weight: 700;
+  font-size: var(--fs-base);
+  line-height: var(--lh-snug);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+}
+
+a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--rule-strong);
+  transition:
+    text-decoration-color var(--dur-2) var(--ease-out),
+    color var(--dur-2) var(--ease-out);
+}
+a:hover {
+  text-decoration-color: var(--signal);
+  color: var(--signal);
+}
+
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+code {
+  background: var(--paper-3);
+  padding: 0.05em 0.35em;
+  border-radius: var(--radius-1);
+  border: 1px solid var(--rule);
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--rule-strong);
+}
+
+/* The Pulse pulsing-mark animation — 1.4s heartbeat. */
+@keyframes pulse-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* Focus-visible — 1px signal stroke + 2px offset, never a glow. */
+:focus-visible {
+  outline: 1px solid var(--signal);
+  outline-offset: 2px;
+  border-radius: var(--radius-1);
 }
