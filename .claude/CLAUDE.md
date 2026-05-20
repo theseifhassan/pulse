@@ -18,7 +18,7 @@ This repository uses project-owned Anvil bindings from `.claude/bindings.yaml`.
 ## VCS And Review
 
 - Use Graphite (`gt`) for stacked branch workflows when branch operations are needed.
-- Use Greptile as the review backend when repository registration is available.
+- No external review backend is configured; rely on local self-review and normal PR review.
 - Do not mutate external tracker, VCS host, or review-tool configuration during setup.
 
 ## Validation
