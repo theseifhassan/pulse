@@ -18,12 +18,20 @@ export default async function HomePage() {
   if (userId !== env.ALLOWED_OWNER_USER_ID) {
     return <ForbiddenState />;
   }
-  const page = await fetchFeedPage(getDb(), {
-    variant: "unread",
-    cursor: null,
-    limit: DEFAULT_PAGE_SIZE,
-  });
-  return <FeedView initial={page} variant="unread" />;
+  const db = getDb();
+  const [feed, archived] = await Promise.all([
+    fetchFeedPage(db, {
+      variant: "unread",
+      cursor: null,
+      limit: DEFAULT_PAGE_SIZE,
+    }),
+    fetchFeedPage(db, {
+      variant: "history",
+      cursor: null,
+      limit: DEFAULT_PAGE_SIZE,
+    }),
+  ]);
+  return <FeedView initialFeed={feed} initialArchived={archived} />;
 }
 
 function ForbiddenState() {

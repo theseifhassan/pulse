@@ -1,34 +1,36 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { ChevronsDown, RotateCw } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
-  FeedCard,
   type FeedItem,
+  SignalCard,
+  type SignalStatus,
   type Vote,
-} from "~/components/feed/feed-card";
-import { ReasoningSheet } from "~/components/feed/reasoning-sheet";
-import { Button } from "~/components/ui/button";
+} from "~/components/feed/signal-card";
 import { Eyebrow } from "~/components/ui/eyebrow";
 import { PulsingMark } from "~/components/ui/mark";
 import { Rule } from "~/components/ui/rule";
+import { groupByDay } from "~/lib/day-group";
+import { cn } from "~/lib/utils";
+
+interface Page {
+  readonly items: readonly FeedItem[];
+  readonly nextCursor: string | null;
+}
 
 export interface FeedViewProps {
-  readonly initial: {
-    readonly items: readonly FeedItem[];
-    readonly nextCursor: string | null;
-  };
-  readonly variant: "unread" | "history";
+  readonly initialFeed: Page;
+  readonly initialArchived: Page;
 }
 
-interface VoteMap {
-  [itemId: string]: Vote;
-}
+type Tab = "feed" | "archived";
 
-const ENDPOINT_BY_VARIANT = {
-  unread: "/api/feed/unread",
-  history: "/api/feed/history",
-} as const;
+const ENDPOINT: Record<Tab, string> = {
+  feed: "/api/feed/unread",
+  archived: "/api/feed/history",
+};
 
 function greetingFor(now: Date): string {
   const h = now.getHours();
@@ -39,220 +41,452 @@ function greetingFor(now: Date): string {
   return "LATE";
 }
 
-export function FeedView({ initial, variant }: FeedViewProps) {
-  const [items, setItems] = useState<FeedItem[]>([...initial.items]);
-  const [nextCursor, setNextCursor] = useState<string | null>(
-    initial.nextCursor,
-  );
-  const [isLoadingMore, startLoadMore] = useTransition();
-  const [votes, setVotes] = useState<VoteMap>({});
-  const [reasoningFor, setReasoningFor] = useState<FeedItem | null>(null);
+function dayLabel(now: Date): string {
+  const weekday = now
+    .toLocaleString("en-US", { weekday: "short" })
+    .toUpperCase()
+    .slice(0, 3);
+  const month = now.toLocaleString("en-US", { month: "short" }).toUpperCase();
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${weekday} · ${month} ${day}`;
+}
 
-  const refreshOnVisibility = useCallback(() => {
-    if (document.visibilityState !== "visible") return;
-    void fetch(ENDPOINT_BY_VARIANT[variant])
+function nowHHMM(): string {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")} LOCAL`;
+}
+
+export function FeedView({ initialFeed, initialArchived }: FeedViewProps) {
+  const [tab, setTab] = useState<Tab>("feed");
+  const [feedItems, setFeedItems] = useState<FeedItem[]>([
+    ...initialFeed.items,
+  ]);
+  const [archivedItems, setArchivedItems] = useState<FeedItem[]>([
+    ...initialArchived.items,
+  ]);
+  const [feedCursor, setFeedCursor] = useState<string | null>(
+    initialFeed.nextCursor,
+  );
+  const [archivedCursor, setArchivedCursor] = useState<string | null>(
+    initialArchived.nextCursor,
+  );
+  const [expandedId, setExpandedId] = useState<string | null>(
+    initialFeed.items[0]?.id ?? null,
+  );
+  const [votes, setVotes] = useState<Record<string, Vote>>({});
+  const [reviewedStatus, setReviewedStatus] = useState<
+    Record<string, SignalStatus>
+  >({});
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshResult, setRefreshResult] = useState<{
+    kind: "new" | "quiet";
+    text: string;
+  } | null>(null);
+  const [lastChecked, setLastChecked] = useState(() => nowHHMM());
+  const [loadingMore, startLoadMore] = useTransition();
+  const scrollSentinel = useRef<HTMLButtonElement | null>(null);
+
+  const activeItems = tab === "feed" ? feedItems : archivedItems;
+  const activeCursor = tab === "feed" ? feedCursor : archivedCursor;
+  const setActiveItems = tab === "feed" ? setFeedItems : setArchivedItems;
+  const setActiveCursor = tab === "feed" ? setFeedCursor : setArchivedCursor;
+  const groups = groupByDay(activeItems, tab === "feed" ? "feed" : "archived");
+
+  const refresh = useCallback(() => {
+    if (refreshing) return;
+    setRefreshing(true);
+    setRefreshResult(null);
+    void fetch(ENDPOINT.feed)
       .then((r) => (r.ok ? r.json() : Promise.reject(r)))
-      .then((page: { items: FeedItem[]; nextCursor: string | null }) => {
-        setItems(page.items);
-        setNextCursor(page.nextCursor);
+      .then((page: Page) => {
+        const incoming = page.items;
+        const knownIds = new Set(feedItems.map((s) => s.id));
+        const fresh = incoming.filter((s) => !knownIds.has(s.id));
+        setFeedItems([...page.items]);
+        setFeedCursor(page.nextCursor);
+        setLastChecked(nowHHMM());
+        setRefreshResult(
+          fresh.length === 0
+            ? { kind: "quiet", text: "no new signals · quiet" }
+            : {
+                kind: "new",
+                text: `${fresh.length} new · added to today`,
+              },
+        );
       })
       .catch(() => {
-        // silent — the user can refresh manually
+        setRefreshResult({ kind: "quiet", text: "couldn't reach the agent" });
+      })
+      .finally(() => {
+        setRefreshing(false);
+        setTimeout(() => setRefreshResult(null), 2800);
       });
-  }, [variant]);
+  }, [refreshing, feedItems]);
 
-  useEffect(() => {
-    document.addEventListener("visibilitychange", refreshOnVisibility);
-    return () =>
-      document.removeEventListener("visibilitychange", refreshOnVisibility);
-  }, [refreshOnVisibility]);
-
-  function loadMore() {
-    if (!nextCursor) return;
+  const loadMore = useCallback(() => {
+    if (!activeCursor || loadingMore) return;
     startLoadMore(async () => {
       try {
         const res = await fetch(
-          `${ENDPOINT_BY_VARIANT[variant]}?cursor=${encodeURIComponent(nextCursor)}`,
+          `${ENDPOINT[tab]}?cursor=${encodeURIComponent(activeCursor)}`,
         );
-        if (!res.ok) throw new Error(`fetch failed (${res.status})`);
-        const page = (await res.json()) as {
-          items: FeedItem[];
-          nextCursor: string | null;
-        };
-        setItems((prev) => [...prev, ...page.items]);
-        setNextCursor(page.nextCursor);
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        const page = (await res.json()) as Page;
+        setActiveItems((prev) => [...prev, ...page.items]);
+        setActiveCursor(page.nextCursor);
       } catch (e) {
-        toast.error("could not load more.");
+        toast.error("could not load earlier signals.");
         console.error(e);
       }
     });
+  }, [activeCursor, loadingMore, tab, setActiveItems, setActiveCursor]);
+
+  // Auto load-more when the sentinel scrolls into the viewport.
+  useEffect(() => {
+    const el = scrollSentinel.current;
+    if (!el || !activeCursor) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !loadingMore) loadMore();
+      },
+      { rootMargin: "200px 0px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [activeCursor, loadingMore, loadMore]);
+
+  // Tab change resets the expanded card.
+  function switchTab(next: Tab) {
+    setTab(next);
+    setExpandedId(null);
   }
 
-  async function onToggleRead(item: FeedItem) {
-    const wasRead = item.readAt !== null;
-    const optimistic: FeedItem = {
-      ...item,
-      readAt: wasRead ? null : new Date().toISOString(),
-    };
-    if (variant === "unread" && !wasRead) {
-      setItems((prev) => prev.filter((x) => x.id !== item.id));
-    } else {
-      setItems((prev) => prev.map((x) => (x.id === item.id ? optimistic : x)));
-    }
-    try {
-      const res = await fetch(`/api/feed/${item.id}/read`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ read: !wasRead }),
-      });
-      if (!res.ok) throw new Error(`status ${res.status}`);
-    } catch (e) {
-      setItems((prev) => {
-        const exists = prev.some((x) => x.id === item.id);
-        if (exists) {
-          return prev.map((x) => (x.id === item.id ? item : x));
-        }
-        return [item, ...prev];
-      });
-      toast.error("could not update read state.");
-      console.error(e);
-    }
+  function toggleExpand(item: FeedItem) {
+    setExpandedId((curr) => (curr === item.id ? null : item.id));
   }
 
   async function onVote(item: FeedItem, next: Vote) {
-    const prevVote = votes[item.id] ?? null;
+    const prev = votes[item.id] ?? null;
     setVotes((m) => ({ ...m, [item.id]: next }));
+    // Optimistically promote the item to "reviewed" — it migrates out of feed.
+    const newStatus: SignalStatus =
+      next === "up" ? "liked" : next === "down" ? "disliked" : null;
+    setReviewedStatus((s) => ({ ...s, [item.id]: newStatus }));
+    if (next !== null && tab === "feed") {
+      // Remove from feed list immediately; let the server-side mark-read sync
+      // separately so the unread query stops returning it.
+      setFeedItems((curr) => curr.filter((s) => s.id !== item.id));
+      setArchivedItems((curr) => {
+        if (curr.some((s) => s.id === item.id)) return curr;
+        return [{ ...item, readAt: new Date().toISOString() }, ...curr];
+      });
+    }
+    setExpandedId(null);
     try {
-      const res = await fetch(`/api/feed/${item.id}/feedback`, {
+      // Persist the feedback.
+      const fbRes = await fetch(`/api/feed/${item.id}/feedback`, {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ vote: next, reasoning: null }),
       });
-      if (!res.ok) throw new Error(`status ${res.status}`);
+      if (!fbRes.ok) throw new Error(`feedback ${fbRes.status}`);
+      // Mark the item read so the unread feed stops surfacing it.
+      if (next !== null) {
+        const readRes = await fetch(`/api/feed/${item.id}/read`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ read: true }),
+        });
+        if (!readRes.ok) throw new Error(`read ${readRes.status}`);
+      }
     } catch (e) {
-      setVotes((m) => ({ ...m, [item.id]: prevVote }));
+      // Roll back the vote + restore the item to the feed list.
+      setVotes((m) => ({ ...m, [item.id]: prev }));
+      setReviewedStatus((s) => {
+        const { [item.id]: _omit, ...rest } = s;
+        return rest;
+      });
+      if (next !== null && tab === "feed") {
+        setFeedItems((curr) => {
+          if (curr.some((s) => s.id === item.id)) return curr;
+          return [item, ...curr];
+        });
+        setArchivedItems((curr) => curr.filter((s) => s.id !== item.id));
+      }
       toast.error("could not save feedback.");
       console.error(e);
     }
   }
 
-  async function onSubmitReasoning(itemId: string, reasoning: string) {
-    const vote = votes[itemId] ?? null;
-    try {
-      const res = await fetch(`/api/feed/${itemId}/feedback`, {
-        method: "PUT",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ vote, reasoning: reasoning || null }),
-      });
-      if (!res.ok) throw new Error(`status ${res.status}`);
-      toast.success("noted.");
-    } catch (e) {
-      toast.error("could not save reasoning.");
-      console.error(e);
-    }
-  }
-
-  const headerEyebrow =
-    variant === "unread" ? greetingFor(new Date()) : "INBOX";
-  const itemCount = items.length;
-
-  const headline =
-    variant === "unread"
-      ? itemCount === 0
-        ? "quiet."
-        : itemCount === 1
-          ? "one thing,\nthen quiet."
-          : itemCount <= 3
-            ? `${spellCount(itemCount)} things,\nthen quiet.`
-            : `${itemCount} things\nworth a look.`
-      : itemCount === 0
-        ? "nothing read yet."
-        : "what you've seen.";
-
-  const subhead =
-    variant === "unread"
-      ? itemCount === 0
-        ? "nothing to inspect. i'll surface the next signal worth your time."
-        : "these are worth your time. nothing else, until they are."
-      : "items you've marked read, most recent first.";
+  const now = new Date();
+  const greeting = greetingFor(now);
+  const day = dayLabel(now);
+  const totalToday = feedItems.length;
 
   return (
-    <div className="pb-24">
-      <header className="px-4 py-7 sm:px-6 sm:py-8">
-        <Eyebrow className="mb-2">{headerEyebrow}</Eyebrow>
-        <h1 className="m-0 whitespace-pre-line text-[32px] font-bold leading-[1.08] tracking-[-0.01em] text-ink lowercase">
-          {headline}
-        </h1>
-        <p className="mt-3 max-w-[320px] text-[13px] leading-[1.55] text-ink-3">
-          <span className="italic">i read 412 items overnight.</span> {subhead}
-        </p>
-      </header>
-
-      {itemCount > 0 ? (
-        <>
-          <Rule />
-          <section>
-            {items.map((item, i) => (
-              <FeedCard
-                key={item.id}
-                item={item}
-                vote={votes[item.id] ?? null}
-                first={i === 0}
-                onToggleRead={onToggleRead}
-                onVote={onVote}
-                onOpenReasoning={setReasoningFor}
-              />
-            ))}
-          </section>
-          <Rule />
-        </>
-      ) : null}
-
-      {nextCursor ? (
-        <div className="flex justify-center py-6">
-          <Button
-            type="button"
-            kind="secondary"
-            onClick={loadMore}
-            disabled={isLoadingMore}
-          >
-            {isLoadingMore ? "LOADING…" : "LOAD MORE"}
-          </Button>
+    <div className="flex flex-col">
+      {/* Hero */}
+      <section className="px-4 pb-5 pt-7 sm:pb-6 sm:pt-8">
+        <div className="mb-3.5 flex items-baseline justify-between">
+          <Eyebrow>{greeting}</Eyebrow>
+          <Eyebrow style={{ fontVariantNumeric: "tabular-nums" }}>
+            {day}
+          </Eyebrow>
         </div>
-      ) : itemCount > 0 ? (
-        <footer className="flex flex-col items-center gap-2 px-4 py-8 text-center">
-          <PulsingMark tone="ink-3" size={10} />
-          <div className="mt-1 text-[12px] font-bold text-ink-2">
-            you&apos;re up to date.
-          </div>
-          <div className="max-w-[240px] text-[11px] leading-[1.5] text-ink-3">
-            i&apos;ll surface the next signal worth your time. nothing to do
-            until then.
-          </div>
-        </footer>
+        <h1 className="m-0 text-[36px] font-bold leading-[1.05] tracking-[-0.02em] text-ink text-balance lowercase">
+          today&apos;s signals,
+          <br />
+          then quiet.
+        </h1>
+        <p className="m-0 mt-3.5 max-w-[340px] text-[13px] leading-[1.55] text-ink-2 text-pretty">
+          <span className="italic text-ink-3">i read 412 items overnight.</span>{" "}
+          {totalToday === 0
+            ? "nothing worth your time. quiet."
+            : totalToday === 1
+              ? "one is worth your time."
+              : `these ${spell(totalToday)} are worth your time.`}
+        </p>
+      </section>
+
+      {/* View tabs */}
+      <div className="flex border-b border-[color:var(--rule-strong)]">
+        <TabButton active={tab === "feed"} onClick={() => switchTab("feed")}>
+          FEED
+        </TabButton>
+        <TabButton
+          active={tab === "archived"}
+          onClick={() => switchTab("archived")}
+        >
+          ARCHIVED
+        </TabButton>
+      </div>
+
+      {/* Refresh row — only on FEED */}
+      {tab === "feed" ? (
+        <RefreshRow
+          refreshing={refreshing}
+          result={refreshResult}
+          lastChecked={lastChecked}
+          onRefresh={refresh}
+        />
       ) : null}
 
-      <ReasoningSheet
-        open={reasoningFor !== null}
-        onOpenChange={(o) => {
-          if (!o) setReasoningFor(null);
-        }}
-        onSubmit={(value) => {
-          if (reasoningFor) {
-            return onSubmitReasoning(reasoningFor.id, value);
-          }
-        }}
-      />
+      {/* Empty / grouped list */}
+      {activeItems.length === 0 ? (
+        <EmptyState tab={tab} />
+      ) : (
+        <div>
+          {groups.map((g, gi) => (
+            <section key={`${g.key}-${gi}`}>
+              <div className="flex items-center justify-center px-4 py-5">
+                <Eyebrow className="leading-none">
+                  {g.label} · {g.items.length}{" "}
+                  {g.items.length === 1 ? "ITEM" : "ITEMS"}
+                </Eyebrow>
+              </div>
+              <Rule />
+              {g.items.map((item, i) => (
+                <SignalCard
+                  key={item.id}
+                  item={item}
+                  rank={i + 1}
+                  first={i === 0}
+                  expanded={expandedId === item.id}
+                  archived={tab === "archived"}
+                  vote={votes[item.id] ?? null}
+                  status={
+                    reviewedStatus[item.id] ??
+                    (tab === "archived" ? "read" : null)
+                  }
+                  onToggleExpand={toggleExpand}
+                  onVote={onVote}
+                />
+              ))}
+              <Rule />
+            </section>
+          ))}
+
+          {/* Load more / exhausted */}
+          {activeCursor ? (
+            <button
+              type="button"
+              ref={scrollSentinel as React.RefObject<HTMLButtonElement>}
+              onClick={loadMore}
+              aria-label="load earlier signals"
+              className={cn(
+                "flex w-full cursor-pointer select-none items-center justify-center gap-2 border-t border-[color:var(--rule)] bg-transparent px-4 py-[18px] transition-colors duration-[160ms] ease-out",
+                "hover:bg-paper-2",
+              )}
+            >
+              {loadingMore ? (
+                <>
+                  <PulsingMark tone="ink-3" size={7} />
+                  <Eyebrow className="leading-none text-ink-2">
+                    READING EARLIER…
+                  </Eyebrow>
+                </>
+              ) : (
+                <>
+                  <Eyebrow className="leading-none text-ink-2">
+                    LOAD EARLIER
+                  </Eyebrow>
+                  <ChevronsDown className="h-3 w-3 text-ink-3" />
+                </>
+              )}
+            </button>
+          ) : (
+            <Tail />
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-function spellCount(n: number): string {
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  readonly active: boolean;
+  readonly onClick: () => void;
+  readonly children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "-mb-px flex-1 cursor-pointer border-b-2 px-4 py-3 font-mono text-[11px] font-bold uppercase tracking-[0.14em] transition-colors duration-[160ms] ease-out",
+        active
+          ? "border-ink bg-paper text-ink"
+          : "border-transparent bg-transparent text-ink-3 hover:text-ink-2",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function RefreshRow({
+  refreshing,
+  result,
+  lastChecked,
+  onRefresh,
+}: {
+  readonly refreshing: boolean;
+  readonly result: { kind: "new" | "quiet"; text: string } | null;
+  readonly lastChecked: string;
+  readonly onRefresh: () => void;
+}) {
+  const showResult = !!result && !refreshing;
+  return (
+    <button
+      type="button"
+      onClick={refreshing ? undefined : onRefresh}
+      disabled={refreshing}
+      aria-label="refresh feed"
+      aria-busy={refreshing}
+      className={cn(
+        "flex w-full select-none items-center justify-between gap-3 border-b border-[color:var(--rule)] bg-paper px-4 py-2.5 text-left transition-colors duration-[160ms] ease-out",
+        refreshing ? "bg-paper-2" : "cursor-pointer hover:bg-paper-2",
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-2">
+        {refreshing ? (
+          <>
+            <PulsingMark tone="signal" size={7} />
+            <Eyebrow className="leading-none text-ink-2">
+              READING SOURCES…
+            </Eyebrow>
+          </>
+        ) : showResult ? (
+          <>
+            <span
+              aria-hidden="true"
+              className={cn(
+                "inline-block h-[7px] w-[7px] rounded-full",
+                result.kind === "new" ? "bg-signal" : "bg-ink-3",
+              )}
+            />
+            <Eyebrow
+              tone={result.kind === "new" ? "signal" : "default"}
+              className="leading-none"
+            >
+              {result.text}
+            </Eyebrow>
+          </>
+        ) : (
+          <>
+            <Eyebrow className="leading-none" style={{ fontSize: 10 }}>
+              LAST CHECKED
+            </Eyebrow>
+            <Eyebrow
+              className="leading-none text-ink-2"
+              style={{ fontSize: 10, fontVariantNumeric: "tabular-nums" }}
+            >
+              {lastChecked}
+            </Eyebrow>
+          </>
+        )}
+      </div>
+      <div
+        className={cn(
+          "inline-grid h-7 w-7 place-items-center transition-colors duration-[160ms] ease-out",
+          refreshing ? "text-ink-4" : "text-ink-2",
+        )}
+        style={{
+          animation: refreshing ? "spin 1.2s linear infinite" : "none",
+        }}
+      >
+        <RotateCw className="h-3.5 w-3.5" />
+      </div>
+    </button>
+  );
+}
+
+function EmptyState({ tab }: { readonly tab: Tab }) {
+  return (
+    <div className="flex flex-col items-center gap-2.5 px-4 py-12 text-center">
+      <div className="text-[13px] font-bold text-ink-2">
+        {tab === "feed" ? "feed is empty." : "no archived items yet."}
+      </div>
+      <div className="max-w-[260px] text-[11px] italic leading-[1.55] text-ink-3">
+        {tab === "feed"
+          ? "nothing waiting for your review."
+          : "rate any feed item and it'll land here."}
+      </div>
+    </div>
+  );
+}
+
+function Tail() {
+  return (
+    <footer className="px-4 py-8 sm:py-10">
+      <div className="flex flex-col items-center gap-2.5 text-center">
+        <PulsingMark tone="ink-3" size={9} />
+        <div className="mt-0.5 text-[14px] font-bold tracking-[0.02em] text-ink">
+          you&apos;re up to date.
+        </div>
+        <div className="max-w-[260px] text-[11px] italic leading-[1.55] text-ink-3">
+          i&apos;ll surface the next signal worth your time. nothing to do until
+          then.
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+function spell(n: number): string {
   switch (n) {
     case 2:
       return "two";
     case 3:
       return "three";
+    case 4:
+      return "four";
+    case 5:
+      return "five";
     default:
       return String(n);
   }
