@@ -1,6 +1,6 @@
 import "server-only";
 
-import { isNotNull, isNull, sql } from "drizzle-orm";
+import { eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { Effect } from "effect";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -14,7 +14,7 @@ import {
 } from "~/server/api/cursor";
 import { parseQuery } from "~/server/api/http";
 import type { Database as DrizzleDb } from "~/server/db";
-import { feedItems } from "~/server/db/schema";
+import { feedback, feedItems } from "~/server/db/schema";
 import { Database } from "~/server/effect/database";
 import {
   type AppError,
@@ -38,15 +38,17 @@ export interface FeedListDeps {
   readonly variant: FeedListVariant;
 }
 
+export type FeedVote = "up" | "down" | null;
+
 export interface FeedItemDto {
   readonly id: string;
   readonly title: string;
   readonly sourceUrl: string;
   readonly sourceName: string;
-  readonly mediaUrl: string | null;
-  readonly body: string;
+  readonly summary: string;
   readonly createdAt: string;
   readonly readAt: string | null;
+  readonly vote: FeedVote;
 }
 
 export interface FeedPage {
@@ -54,16 +56,27 @@ export interface FeedPage {
   readonly nextCursor: string | null;
 }
 
-function toDto(row: typeof feedItems.$inferSelect): FeedItemDto {
+interface FeedRow {
+  readonly id: string;
+  readonly title: string;
+  readonly sourceUrl: string;
+  readonly sourceName: string;
+  readonly summary: string;
+  readonly createdAt: Date;
+  readonly readAt: Date | null;
+  readonly vote: FeedVote;
+}
+
+function toDto(row: FeedRow): FeedItemDto {
   return {
     id: row.id,
     title: row.title,
     sourceUrl: row.sourceUrl,
     sourceName: row.sourceName,
-    mediaUrl: row.mediaUrl,
-    body: row.body,
+    summary: row.summary,
     createdAt: row.createdAt.toISOString(),
     readAt: row.readAt ? row.readAt.toISOString() : null,
+    vote: row.vote,
   };
 }
 
@@ -79,14 +92,27 @@ export async function fetchFeedPage(
   db: DrizzleDb,
   { variant, cursor, limit }: FetchFeedPageOpts,
 ): Promise<FeedPage> {
-  let rows: (typeof feedItems.$inferSelect)[];
+  // Left-join feedback so archived items can render their LIKED/DIDN'T badge
+  // after a reload (otherwise the badge only sticks for the in-memory session).
+  const baseSelect = {
+    id: feedItems.id,
+    title: feedItems.title,
+    sourceUrl: feedItems.sourceUrl,
+    sourceName: feedItems.sourceName,
+    summary: feedItems.summary,
+    createdAt: feedItems.createdAt,
+    readAt: feedItems.readAt,
+    vote: feedback.vote,
+  };
+  let rows: FeedRow[];
   if (variant === "unread") {
     const whereClause = cursor
       ? sql`${feedItems.readAt} IS NULL AND (${feedItems.createdAt}, ${feedItems.id}) < (${cursor.ts}::timestamptz, ${cursor.id}::uuid)`
       : isNull(feedItems.readAt);
     rows = await db
-      .select()
+      .select(baseSelect)
       .from(feedItems)
+      .leftJoin(feedback, eq(feedback.feedItemId, feedItems.id))
       .where(whereClause)
       .orderBy(sql`${feedItems.createdAt} DESC, ${feedItems.id} DESC`)
       .limit(limit + 1);
@@ -95,8 +121,9 @@ export async function fetchFeedPage(
       ? sql`${feedItems.readAt} IS NOT NULL AND (${feedItems.readAt}, ${feedItems.id}) < (${cursor.ts}::timestamptz, ${cursor.id}::uuid)`
       : isNotNull(feedItems.readAt);
     rows = await db
-      .select()
+      .select(baseSelect)
       .from(feedItems)
+      .leftJoin(feedback, eq(feedback.feedItemId, feedItems.id))
       .where(whereClause)
       .orderBy(sql`${feedItems.readAt} DESC, ${feedItems.id} DESC`)
       .limit(limit + 1);

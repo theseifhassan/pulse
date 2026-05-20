@@ -26,7 +26,7 @@ async function seed(): Promise<string> {
       title: "x",
       sourceUrl: `https://example.test/${crypto.randomUUID()}`,
       sourceName: "example.test",
-      body: "body",
+      summary: "summary",
     })
     .returning({ id: feedItems.id });
   return row.id;

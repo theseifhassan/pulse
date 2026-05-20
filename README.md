@@ -92,10 +92,11 @@ See [`DEPLOYMENT.md`](DEPLOYMENT.md) for end-to-end Vercel + Postgres + Clerk se
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | POST | `/api/ingest` | Bearer `INGEST_TOKEN` | Create a feed item (idempotent on `source_url`). |
+| GET | `/api/feedback` | Bearer `INGEST_TOKEN` | Outbound list of all votes — Layla syncs this back into her recommendation loop. |
 | GET | `/api/feed/unread` | Clerk owner | Cursor-paginated unread items, newest-first. |
 | GET | `/api/feed/history` | Clerk owner | Cursor-paginated read items, sorted by read time. |
 | PATCH | `/api/feed/:id/read` | Clerk owner | `{ read: boolean }` — toggle read state. |
-| PUT | `/api/feed/:id/feedback` | Clerk owner | `{ vote: 'up'\|'down'\|null, reasoning?: string\|null }` — upsert. |
+| PUT | `/api/feed/:id/feedback` | Clerk owner | `{ vote: 'up'\|'down'\|null }` — upsert. |
 
 Page routes:
 

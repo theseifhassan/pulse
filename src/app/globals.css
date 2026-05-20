@@ -126,8 +126,34 @@
   --gutter-desktop: 24px;
 }
 
+/* Dark mode — explicit via [data-theme="dark"] (set by ThemeProvider). The
+   system-preference fallback only applies when no explicit theme is set yet,
+   so the user's chosen theme always wins. */
+:root[data-theme="dark"] {
+  --paper: #100e0a;
+  --paper-2: #17140e;
+  --paper-3: #1f1b13;
+  --ink: #f2eee6;
+  --ink-2: #cfc8b6;
+  --ink-3: #8a8472;
+  --ink-4: #58523f;
+  --rule: #f2eee61a;
+  --rule-strong: #f2eee633;
+
+  --signal: #ff6a3d;
+  --signal-soft: #2a1a11;
+  --watch: #e0a93a;
+  --watch-soft: #2a2412;
+  --verified: #6fb07e;
+  --verified-soft: #19261c;
+  --link: #7ea7ff;
+
+  --shadow-2: 0 1px 2px 0 #00000080;
+  --shadow-3: 0 8px 24px -12px #000000b3;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --paper: #100e0a;
     --paper-2: #17140e;
     --paper-3: #1f1b13;
@@ -222,19 +248,21 @@ h4 {
   letter-spacing: var(--tracking-wide);
 }
 
-a {
-  color: var(--ink);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-  text-decoration-color: var(--rule-strong);
-  transition:
-    text-decoration-color var(--dur-2) var(--ease-out),
-    color var(--dur-2) var(--ease-out);
-}
-a:hover {
-  text-decoration-color: var(--signal);
-  color: var(--signal);
+@layer base {
+  a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--rule-strong);
+    transition:
+      text-decoration-color var(--dur-2) var(--ease-out),
+      color var(--dur-2) var(--ease-out);
+  }
+  a:hover {
+    text-decoration-color: var(--signal);
+    color: var(--signal);
+  }
 }
 
 code,
@@ -264,6 +292,41 @@ hr {
   }
   50% {
     opacity: 0.4;
+  }
+}
+
+@keyframes slide-in {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 

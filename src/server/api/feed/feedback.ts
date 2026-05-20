@@ -16,7 +16,6 @@ import {
 
 export const FeedbackRequest = z.object({
   vote: z.enum(["up", "down"]).nullable(),
-  reasoning: z.string().nullable().optional(),
 });
 
 export type FeedbackRequestT = z.infer<typeof FeedbackRequest>;
@@ -55,7 +54,6 @@ export function handleFeedback({
     }
 
     const now = new Date();
-    const reasoning = input.reasoning ?? null;
     const upserted = yield* Effect.tryPromise({
       try: () =>
         db
@@ -63,12 +61,11 @@ export function handleFeedback({
           .values({
             feedItemId: itemId,
             vote: input.vote,
-            reasoning,
             updatedAt: now,
           })
           .onConflictDoUpdate({
             target: feedback.feedItemId,
-            set: { vote: input.vote, reasoning, updatedAt: now },
+            set: { vote: input.vote, updatedAt: now },
           })
           .returning(),
       catch: (cause): AppError => new DatabaseError({ cause }),
@@ -78,7 +75,6 @@ export function handleFeedback({
     return NextResponse.json({
       feedItemId: row.feedItemId,
       vote: row.vote,
-      reasoning: row.reasoning,
       updatedAt: row.updatedAt.toISOString(),
     });
   });

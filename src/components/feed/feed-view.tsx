@@ -32,28 +32,23 @@ const ENDPOINT: Record<Tab, string> = {
   archived: "/api/feed/history",
 };
 
-function greetingFor(now: Date): string {
-  const h = now.getHours();
-  if (h < 5) return "STILL UP";
-  if (h < 12) return "GOOD MORNING";
-  if (h < 17) return "GOOD AFTERNOON";
-  if (h < 21) return "GOOD EVENING";
-  return "LATE";
-}
-
-function dayLabel(now: Date): string {
-  const weekday = now
-    .toLocaleString("en-US", { weekday: "short" })
-    .toUpperCase()
-    .slice(0, 3);
-  const month = now.toLocaleString("en-US", { month: "short" }).toUpperCase();
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${weekday} · ${month} ${day}`;
-}
-
 function nowHHMM(): string {
   const d = new Date();
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")} LOCAL`;
+}
+
+function mergeVotes(
+  prev: Record<string, Vote>,
+  items: readonly FeedItem[],
+): Record<string, Vote> {
+  let next = prev;
+  for (const item of items) {
+    if (item.vote && prev[item.id] !== item.vote) {
+      if (next === prev) next = { ...prev };
+      next[item.id] = item.vote;
+    }
+  }
+  return next;
 }
 
 export function FeedView({ initialFeed, initialArchived }: FeedViewProps) {
@@ -73,7 +68,16 @@ export function FeedView({ initialFeed, initialArchived }: FeedViewProps) {
   const [expandedId, setExpandedId] = useState<string | null>(
     initialFeed.items[0]?.id ?? null,
   );
-  const [votes, setVotes] = useState<Record<string, Vote>>({});
+  const [votes, setVotes] = useState<Record<string, Vote>>(() => {
+    const seed: Record<string, Vote> = {};
+    for (const item of initialFeed.items) {
+      if (item.vote) seed[item.id] = item.vote;
+    }
+    for (const item of initialArchived.items) {
+      if (item.vote) seed[item.id] = item.vote;
+    }
+    return seed;
+  });
   const [reviewedStatus, setReviewedStatus] = useState<
     Record<string, SignalStatus>
   >({});
@@ -104,6 +108,7 @@ export function FeedView({ initialFeed, initialArchived }: FeedViewProps) {
         const fresh = incoming.filter((s) => !knownIds.has(s.id));
         setFeedItems([...page.items]);
         setFeedCursor(page.nextCursor);
+        setVotes((m) => mergeVotes(m, page.items));
         setLastChecked(nowHHMM());
         setRefreshResult(
           fresh.length === 0
@@ -134,6 +139,7 @@ export function FeedView({ initialFeed, initialArchived }: FeedViewProps) {
         const page = (await res.json()) as Page;
         setActiveItems((prev) => [...prev, ...page.items]);
         setActiveCursor(page.nextCursor);
+        setVotes((m) => mergeVotes(m, page.items));
       } catch (e) {
         toast.error("could not load earlier signals.");
         console.error(e);
@@ -156,10 +162,41 @@ export function FeedView({ initialFeed, initialArchived }: FeedViewProps) {
   }, [activeCursor, loadingMore, loadMore]);
 
   // Tab change resets the expanded card.
-  function switchTab(next: Tab) {
+  const switchTab = useCallback((next: Tab) => {
     setTab(next);
     setExpandedId(null);
-  }
+  }, []);
+
+  // Horizontal swipe → switch tabs. Listens on a wrapper around the entire feed
+  // surface; ignores swipes that originated on interactive children (links,
+  // buttons) so card taps and source-link clicks still work normally.
+  const touchRef = useRef<{ x: number; y: number; ignore: boolean } | null>(
+    null,
+  );
+  const onTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    const t = e.touches[0];
+    if (!t) return;
+    // Don't hijack scrolls inside scrollable inner regions or selections.
+    touchRef.current = { x: t.clientX, y: t.clientY, ignore: false };
+  }, []);
+  const onTouchEnd = useCallback(
+    (e: React.TouchEvent<HTMLDivElement>) => {
+      const start = touchRef.current;
+      touchRef.current = null;
+      if (!start || start.ignore) return;
+      const t = e.changedTouches[0];
+      if (!t) return;
+      const dx = t.clientX - start.x;
+      const dy = t.clientY - start.y;
+      const ax = Math.abs(dx);
+      const ay = Math.abs(dy);
+      // Require a confident horizontal gesture: ≥50px and clearly horizontal.
+      if (ax < 50 || ax < ay * 1.5) return;
+      if (dx < 0 && tab === "feed") switchTab("archived");
+      else if (dx > 0 && tab === "archived") switchTab("feed");
+    },
+    [tab, switchTab],
+  );
 
   function toggleExpand(item: FeedItem) {
     setExpandedId((curr) => (curr === item.id ? null : item.id));
@@ -187,7 +224,7 @@ export function FeedView({ initialFeed, initialArchived }: FeedViewProps) {
       const fbRes = await fetch(`/api/feed/${item.id}/feedback`, {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ vote: next, reasoning: null }),
+        body: JSON.stringify({ vote: next }),
       });
       if (!fbRes.ok) throw new Error(`feedback ${fbRes.status}`);
       // Mark the item read so the unread feed stops surfacing it.
@@ -218,36 +255,12 @@ export function FeedView({ initialFeed, initialArchived }: FeedViewProps) {
     }
   }
 
-  const now = new Date();
-  const greeting = greetingFor(now);
-  const day = dayLabel(now);
-  const totalToday = feedItems.length;
-
   return (
-    <div className="flex flex-col">
-      {/* Hero */}
-      <section className="px-4 pb-5 pt-7 sm:pb-6 sm:pt-8">
-        <div className="mb-3.5 flex items-baseline justify-between">
-          <Eyebrow>{greeting}</Eyebrow>
-          <Eyebrow style={{ fontVariantNumeric: "tabular-nums" }}>
-            {day}
-          </Eyebrow>
-        </div>
-        <h1 className="m-0 text-[36px] font-bold leading-[1.05] tracking-[-0.02em] text-ink text-balance lowercase">
-          today&apos;s signals,
-          <br />
-          then quiet.
-        </h1>
-        <p className="m-0 mt-3.5 max-w-[340px] text-[13px] leading-[1.55] text-ink-2 text-pretty">
-          <span className="italic text-ink-3">i read 412 items overnight.</span>{" "}
-          {totalToday === 0
-            ? "nothing worth your time. quiet."
-            : totalToday === 1
-              ? "one is worth your time."
-              : `these ${spell(totalToday)} are worth your time.`}
-        </p>
-      </section>
-
+    <div
+      className="flex flex-col"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       {/* View tabs */}
       <div className="flex border-b border-[color:var(--rule-strong)]">
         <TabButton active={tab === "feed"} onClick={() => switchTab("feed")}>
@@ -285,23 +298,28 @@ export function FeedView({ initialFeed, initialArchived }: FeedViewProps) {
                 </Eyebrow>
               </div>
               <Rule />
-              {g.items.map((item, i) => (
-                <SignalCard
-                  key={item.id}
-                  item={item}
-                  rank={i + 1}
-                  first={i === 0}
-                  expanded={expandedId === item.id}
-                  archived={tab === "archived"}
-                  vote={votes[item.id] ?? null}
-                  status={
-                    reviewedStatus[item.id] ??
-                    (tab === "archived" ? "read" : null)
-                  }
-                  onToggleExpand={toggleExpand}
-                  onVote={onVote}
-                />
-              ))}
+              {g.items.map((item, i) => {
+                const v = votes[item.id] ?? null;
+                const archivedStatus: SignalStatus =
+                  v === "up" ? "liked" : v === "down" ? "disliked" : "read";
+                return (
+                  <SignalCard
+                    key={item.id}
+                    item={item}
+                    rank={i + 1}
+                    first={i === 0}
+                    expanded={expandedId === item.id}
+                    archived={tab === "archived"}
+                    vote={v}
+                    status={
+                      reviewedStatus[item.id] ??
+                      (tab === "archived" ? archivedStatus : null)
+                    }
+                    onToggleExpand={toggleExpand}
+                    onVote={onVote}
+                  />
+                );
+              })}
               <Rule />
             </section>
           ))}
@@ -462,32 +480,8 @@ function EmptyState({ tab }: { readonly tab: Tab }) {
 
 function Tail() {
   return (
-    <footer className="px-4 py-8 sm:py-10">
-      <div className="flex flex-col items-center gap-2.5 text-center">
-        <PulsingMark tone="ink-3" size={9} />
-        <div className="mt-0.5 text-[14px] font-bold tracking-[0.02em] text-ink">
-          you&apos;re up to date.
-        </div>
-        <div className="max-w-[260px] text-[11px] italic leading-[1.55] text-ink-3">
-          i&apos;ll surface the next signal worth your time. nothing to do until
-          then.
-        </div>
-      </div>
+    <footer className="border-t border-[color:var(--rule)] px-4 py-6 text-center text-[11px] italic text-ink-3">
+      no further history.
     </footer>
   );
-}
-
-function spell(n: number): string {
-  switch (n) {
-    case 2:
-      return "two";
-    case 3:
-      return "three";
-    case 4:
-      return "four";
-    case 5:
-      return "five";
-    default:
-      return String(n);
-  }
 }

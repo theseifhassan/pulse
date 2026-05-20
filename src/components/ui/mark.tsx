@@ -38,11 +38,15 @@ export function Mark({
 }
 
 // Heartbeat-blink variant — opacity oscillates 1 → 0.4 → 1 over 1.4s.
+// Renders as a circle (dot) per the design system: ■ is reserved for the
+// brand/typographic glyph, while loading + status indicators use a pulsing
+// circle to keep the two readings distinct.
 export function PulsingMark(props: MarkProps) {
   return (
     <Mark
       {...props}
       style={{
+        borderRadius: "50%",
         animation: "pulse-blink 1.4s ease-in-out infinite",
         ...props.style,
       }}

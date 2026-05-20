@@ -47,9 +47,9 @@ export const KIND_LABEL: Record<SignalKind, string> = {
 
 const WORDS_PER_MIN = 220;
 
-// Estimate read time from body word count. Tweets/short bodies get a SEC label.
-export function inferReadLabel(body: string, kind: SignalKind): string {
-  const words = body.trim().split(/\s+/).filter(Boolean).length;
+// Estimate read time from summary word count. Tweets/short summaries get a SEC label.
+export function inferReadLabel(summary: string, kind: SignalKind): string {
+  const words = summary.trim().split(/\s+/).filter(Boolean).length;
   if (kind === "tweet" || words < 80) return "30 SEC";
   const minutes = Math.max(1, Math.round(words / WORDS_PER_MIN));
   if (minutes < 60) return `${minutes} MIN`;

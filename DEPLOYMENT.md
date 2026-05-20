@@ -68,10 +68,11 @@ curl -X POST "https://pulse.example.com/api/ingest" \
     "title": "Effect 4 beta release notes",
     "sourceUrl": "https://effect.website/blog/effect-4-beta",
     "sourceName": "effect.website",
-    "mediaUrl": null,
-    "body": "TLDR: Effect 4 beta ships a redesigned schema module."
+    "summary": "TLDR: Effect 4 beta ships a redesigned schema module."
   }'
 ```
+
+`title` is capped at 200 characters and `summary` at 2000 characters.
 
 Expected responses:
 
@@ -80,6 +81,30 @@ Expected responses:
 - `401 { "error": "Unauthorized", "reason": "..." }` — bearer missing or wrong.
 - `409 { "error": "Conflict", "existingId": "<uuid>", "reason": "source_url already exists" }` — idempotent dedup.
 - `429 { "error": "RateLimited", "retryAfterSeconds": N }` — rate limit hit; `Retry-After` header set.
+
+## Curl example — Layla feedback sync
+
+```bash
+curl "https://pulse.example.com/api/feedback" \
+  -H "Authorization: Bearer $INGEST_TOKEN"
+```
+
+Returns every recorded vote (including cleared votes with `vote: null`) so Layla can refresh her recommendation signals:
+
+```json
+{
+  "items": [
+    {
+      "feedItemId": "…",
+      "sourceUrl": "https://effect.website/blog/effect-4-beta",
+      "vote": "up",
+      "updatedAt": "2026-05-19T18:24:11.000Z"
+    }
+  ]
+}
+```
+
+Same bearer token and per-token rate limit as `/api/ingest`. Newest changes come first (`updated_at DESC`); Layla can persist the highest `updatedAt` she's seen to detect what changed since the last sync.
 
 ## Owner sign-in
 
